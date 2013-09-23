@@ -27,6 +27,8 @@ static struct option long_options[] = {
     { "optimise",      required_argument, NULL, 'o' },
     { "from-idx",      required_argument, NULL, 'f' },
     { "to-idx",        required_argument, NULL, 't' },
+    { "from-id",       required_argument, NULL, 'F' },
+    { "to-id",         required_argument, NULL, 'T' },
     { "via-idx",       required_argument, NULL, 'V' },
     { "mode",          required_argument, NULL, 'm' },
     { "start-trip-idx",    required_argument, NULL, 'Q' },
@@ -54,7 +56,7 @@ int main(int argc, char **argv) {
 
     int opt = 0;
     while (opt >= 0) {
-        opt = getopt_long(argc, argv, "adrhD:s:S:o:f:t:V:m:Q:x:y:z:w:A:g:G:T:v", long_options, NULL);
+        opt = getopt_long(argc, argv, "adrhD:s:S:o:f:t:F:T:V:m:Q:x:y:z:w:A:g:G:T:v", long_options, NULL);
         if (opt < 0) continue;
         switch (opt) {
         case 'T':

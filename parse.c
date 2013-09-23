@@ -35,6 +35,12 @@ void parse_request(router_request_t *req, tdata_t *tdata, int opt, char *optarg)
     case 't':
         req->to = strtol(optarg, NULL, 10);
         break;
+    case 'F':
+        req->from = tdata_stopidx_by_stop_id(tdata, optarg, 0);
+        break;
+    case 'T':
+        req->to = tdata_stopidx_by_stop_id(tdata, optarg, 0);
+        break;
     case 'V':
         req->via = strtol(optarg, NULL, 10);
         break;
@@ -192,6 +198,10 @@ bool parse_request_from_qstring(router_request_t *req, tdata_t *tdata, char *qst
             opt = 'f';
         } else if (strcmp(key, "to-idx") == 0) {
             opt = 't';
+        } else if (strcmp(key, "from-id") == 0) {
+            opt = 'F';
+        } else if (strcmp(key, "to-id") == 0) {
+            opt = 'T';
         } else if (strcmp(key, "via-idx") == 0) {
             opt = 'V';
         } else if (strcmp(key, "mode") == 0) {
