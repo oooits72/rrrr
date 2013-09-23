@@ -834,8 +834,12 @@ static inline char *plan_render_itinerary (struct itinerary *itin, tdata_t *tdat
         char ct1[16];
         btimetext(leg->t0, ct0);
         btimetext(leg->t1, ct1);
-        char *s0_id = tdata_stop_desc_for_index(tdata, leg->s0);
-        char *s1_id = tdata_stop_desc_for_index(tdata, leg->s1);
+        char *s0_desc = tdata_stop_desc_for_index(tdata, leg->s0);
+        char *s1_desc = tdata_stop_desc_for_index(tdata, leg->s1);
+        char *s0_id   = tdata_stop_id_for_index(tdata, leg->s0);
+        char *s1_id   = tdata_stop_id_for_index(tdata, leg->s1);
+        char *t_id    = tdata_trip_id_for_route_trip_index(tdata, leg->route, leg->trip);
+        char *r_id    = tdata_route_id_for_index(tdata, leg->route);
         char *route_desc = (leg->route == WALK) ? "walk;walk" : tdata_route_desc_for_index (tdata, leg->route);
         float delay_min = (leg->route == WALK) ? 0 : tdata_delay_min (tdata, leg->route, leg->trip);
         
@@ -883,8 +887,8 @@ static inline char *plan_render_itinerary (struct itinerary *itin, tdata_t *tdat
             }
         }
 
-        b += sprintf (b, "%s %5d %3d %5d %5d %s %s %+3.1f ;%s;%s;%s;%s\n",
-            leg_mode, leg->route, leg->trip, leg->s0, leg->s1, ct0, ct1, delay_min, route_desc, s0_id, s1_id,
+        b += sprintf (b, "%-*s %-*s %-*s %-*s %-*s %s %s %+3.1f ;%s;%s;%s;%s\n",
+            9, leg_mode, 12, r_id, 12, t_id, 6, s0_id, 6, s1_id, ct0, ct1, delay_min, route_desc, s0_desc, s1_desc,
             (alert_msg ? alert_msg : ""));
 
         if (b > b_end) {

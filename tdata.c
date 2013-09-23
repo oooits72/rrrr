@@ -44,11 +44,22 @@ struct tdata_header {
 };
 
 inline char *tdata_route_id_for_index(tdata_t *td, uint32_t route_index) {
+    if (route_index == WALK)
+        return "WALK";
+
     return td->route_ids + (td->route_id_width * route_index);
 }
 
 inline char *tdata_stop_id_for_index(tdata_t *td, uint32_t stop_index) {
     return td->stop_ids + (td->stop_id_width * stop_index);
+}
+
+inline char *tdata_trip_id_for_route_trip_index(tdata_t *td, uint32_t route_index, uint32_t trip_index) {
+    if (route_index == WALK)
+        return "WALK";
+
+    route_t route = (td->routes)[route_index];
+    return td->trip_ids + ( (route.trip_ids_offset + trip_index) * td->trip_id_width );
 }
 
 inline char *tdata_trip_id_for_index(tdata_t *td, uint32_t trip_index) {
