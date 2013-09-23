@@ -888,7 +888,7 @@ static inline char *plan_render_itinerary (struct itinerary *itin, tdata_t *tdat
         }
 
         b += sprintf (b, "%-*s %-*s %-*s %-*s %-*s %s %s %+3.1f ;%s;%s;%s;%s\n",
-            9, leg_mode, 12, r_id, 12, t_id, 6, s0_id, 6, s1_id, ct0, ct1, delay_min, route_desc, s0_desc, s1_desc,
+            9, leg_mode, tdata->route_id_width, r_id, tdata->trip_id_width, t_id, tdata->stop_id_width, s0_id, tdata->stop_id_width, s1_id, ct0, ct1, delay_min, route_desc, s0_desc, s1_desc,
             (alert_msg ? alert_msg : ""));
 
         if (b > b_end) {
