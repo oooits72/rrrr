@@ -39,7 +39,7 @@ static struct option long_options[] = {
     { "trip-attributes", required_argument, NULL, 'A' },
     { "gtfsrt",        required_argument, NULL, 'g' },
     { "gtfsrt-alerts", required_argument, NULL, 'G' },
-    { "timetable",     required_argument, NULL, 'T' },
+    { "timetable",     required_argument, NULL, 'U' },
     { "verbose",     no_argument, NULL, 'v' },
     { NULL, 0, 0, 0 } /* end */
 };
@@ -56,10 +56,10 @@ int main(int argc, char **argv) {
 
     int opt = 0;
     while (opt >= 0) {
-        opt = getopt_long(argc, argv, "adrhD:s:S:o:f:t:F:T:V:m:Q:x:y:z:w:A:g:G:T:v", long_options, NULL);
+        opt = getopt_long(argc, argv, "adrhD:s:S:o:f:t:F:T:V:m:Q:x:y:z:w:A:g:G:U:v", long_options, NULL);
         if (opt < 0) continue;
         switch (opt) {
-        case 'T':
+        case 'U':
             tdata_file = optarg;
             break;
         case 'g':
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     optind = 0;
     opt = 0;
     while (opt >= 0) {
-        opt = getopt_long(argc, argv, "adrhD:s:S:o:f:t:V:m:Q:x:y:z:w:A:g:G:T:v", long_options, NULL);
+        opt = getopt_long(argc, argv, "adrhD:s:S:o:f:t:F:T:V:m:Q:x:y:z:w:A:g:G:U:v", long_options, NULL);
         parse_request(&req, &tdata, opt, optarg);
     }
     
