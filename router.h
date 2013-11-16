@@ -83,7 +83,7 @@ struct router_request {
     uint8_t walk_slack;  // an extra delay per transfer, in seconds 
     bool arrive_by;      // whether the given time is an arrival time rather than a departure time
     uint32_t max_transfers;  // the largest number of transfers to allow in the result
-    uint32_t day_mask;   // bit for the day on which we are searching, relative to the timetable calendar
+    calendar_t day_mask;   // bit for the day on which we are searching, relative to the timetable calendar
     uint8_t mode;        // selects the mode by a bitfield
     uint8_t trip_attributes; // select required attributes bitfield (from trips)
     uint8_t optimise;    // restrict the output to specific optimisation flags
@@ -127,6 +127,12 @@ struct plan {
     struct itinerary itineraries[RRRR_MAX_ROUNDS];
 };
 
+typedef struct service_day {
+    rtime_t  midnight;
+    calendar_t mask;
+    bool     apply_realtime;
+} sday_t;
+
 
 /* FUNCTION PROTOTYPES */
 
@@ -145,6 +151,8 @@ bool router_request_reverse(router_t*, router_request_t*);
 void router_teardown(router_t*);
 
 bool router_route(router_t*, router_request_t*);
+
+void router_round(router_t*, router_request_t*, sday_t[], uint8_t, uint32_t, uint32_t, calendar_t);
 
 void router_result_to_plan (struct plan *plan, router_t *router, router_request_t *req);
 
