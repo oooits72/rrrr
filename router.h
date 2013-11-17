@@ -80,7 +80,7 @@ struct router_request {
     rtime_t time;        // the departure or arrival time at which to search (in internal rtime)
     rtime_t time_cutoff; // the latest (or earliest in arrive_by) acceptable time to reach the destination 
     double walk_speed;   // speed at which the user walks, in meters per second
-    uint8_t walk_slack;  // an extra delay per transfer, in seconds 
+    uint16_t walk_slack;  // an extra delay per transfer, in seconds 
     bool arrive_by;      // whether the given time is an arrival time rather than a departure time
     uint32_t max_transfers;  // the largest number of transfers to allow in the result
     uint32_t day_mask;   // bit for the day on which we are searching, relative to the timetable calendar
