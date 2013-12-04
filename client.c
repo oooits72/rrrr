@@ -1,11 +1,15 @@
 /* client.c : test client */
 
 #include <time.h>
-#include <zmq.h>
-#include <czmq.h>
+#include <stdio.h>
+#include <string.h>
+#include <nanomsg/nn.h>
+#include <nanomsg/reqrep.h>
 #include <assert.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <sys/time.h>
 #include "rrrr.h"
 #include "router.h"
 #include "config.h"
@@ -15,13 +19,13 @@ static bool randomize = false;
 static uint32_t from_s = 0;
 static uint32_t to_s = 1;
 
-static void client_task (void *args, zctx_t *ctx, void *pipe) {
+static void *client_task (void *args) {
     uint32_t n_requests = *((uint32_t *) args);
     syslog (LOG_INFO, "test client thread will send %d requests", n_requests);
     // connect client thread to load balancer
-    void *sock = zsocket_new (ctx, ZMQ_REQ); // auto-deleted with thread
-    uint32_t rc = zsocket_connect (sock, CLIENT_ENDPOINT);
-    assert (rc == 0);
+    int sock = nn_socket (AF_SP, NN_REQ);
+    int rc = nn_connect(sock, CLIENT_ENDPOINT);
+    assert (rc > 0);
     uint32_t request_count = 0;
 
     // load transit data from disk
@@ -39,19 +43,22 @@ static void client_task (void *args, zctx_t *ctx, void *pipe) {
             req.to=to_s;
         }
         // if (verbose) router_request_dump(&router, &req); // router is not available in client
-        zmq_send(sock, &req, sizeof(req), 0);
+        nn_send(sock, &req, sizeof(req), 0);
         // syslog (LOG_INFO, "test client thread has sent %d requests\n", request_count);
-        char *reply = zstr_recv (sock);
+        void *msg;
+        nn_recv(sock, &msg, NN_MSG, 0);
+        char *reply = (char *) msg;
         if (!reply) 
             break;
         if (verbose) 
             printf ("%s", reply);
-        free (reply);
+        nn_freemsg(msg);
         if (++request_count >= n_requests)
             break;
     }
     syslog (LOG_INFO, "test client thread terminating");
-    zstr_send (pipe, "done");
+
+    return NULL;
 }
 
 void usage() {
@@ -113,17 +120,15 @@ int main (int argc, char **argv) {
     struct timeval t0, t1;
     
     // create threads
-    void *pipes[concurrency];
-    zctx_t *ctx = zctx_new ();
+    pthread_t pipes[concurrency];
     gettimeofday(&t0, NULL);
-    for (uint32_t n = 0; n < concurrency; n++)
-        pipes[n] = zthread_fork (ctx, client_task, n_reqs + n);
+    for (uint32_t n = 0; n < concurrency; n++) {
+        pthread_create (&pipes[n], NULL, client_task, n_reqs + n);
+    }
 
     // wait for all threads to complete
     for (uint32_t n = 0; n < concurrency; n++) {
-        char *s = zstr_recv (pipes[n]);
-        if (s == NULL) break; // interrupted
-        free (s);
+        pthread_join (pipes[n], NULL);
     }
 
     // output summary information
@@ -135,7 +140,6 @@ int main (int argc, char **argv) {
     //printf("%c", '\0x1A');
     
     // teardown
-    zctx_destroy (&ctx);
     closelog();
     
 }

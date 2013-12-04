@@ -22,7 +22,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdbool.h>
-#include <czmq.h>
+#include <nanomsg/nn.h>
 #include "util.h"
 #include "config.h"
 #include "router.h"
