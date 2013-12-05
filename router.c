@@ -568,14 +568,14 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         // D printf("\n");
                         /* skip all remaining trips if it starts later than our best known arrival_time */
                         if (route_trips[this_trip].begin_time > router->best_time[req->to]) break;
-                        /* skip this trip if it is banned */
-                        for (uint32_t bt = 0; bt < req->n_banned_trips; bt++) if (route_idx == req->banned_trip_route && this_trip == req->banned_trip_offset) continue;
                         /* skip this trip if it is not running on the current service day */
                         if ( ! (serviceday->mask & trip_masks[this_trip])) continue;
-                        /* skip this trip if it doesn't have all our required attributes */
-                        if ( ! ((req->trip_attributes & route_trip_attributes[this_trip]) == req->trip_attributes)) continue;
                         /* skip this trip if the realtime delay equals CANCELED */
                         if ( route_trips[this_trip].realtime_delay == CANCELED) continue;
+                        /* skip this trip if it doesn't have all our required attributes */
+                        if ( ! ((req->trip_attributes & route_trip_attributes[this_trip]) == req->trip_attributes)) continue;
+                        /* skip this trip if it is banned */
+                        for (uint32_t bt = 0; bt < req->n_banned_trips; bt++) if (route_idx == req->banned_trip_route && this_trip == req->banned_trip_offset) continue;
                         
                         /* consider the arrival or departure time on the current service day */ 
                         rtime_t time = tdata_stoptime (router->tdata, &(route_trips[this_trip]), route_stop, req->arrive_by, serviceday);
