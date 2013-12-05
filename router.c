@@ -566,6 +566,8 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         // D printBits(4, & (trip_masks[this_trip]));
                         // D printBits(4, & (serviceday->mask));
                         // D printf("\n");
+                        /* skip all remaining trips if it starts later than our best known arrival_time */
+                        if (route_trips[this_trip].begin_time > router->best_time[req->to]) break;
                         /* skip this trip if it is banned */
                         for (uint32_t bt = 0; bt < req->n_banned_trips; bt++) if (route_idx == req->banned_trip_route && this_trip == req->banned_trip_offset) continue;
                         /* skip this trip if it is not running on the current service day */
