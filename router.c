@@ -568,7 +568,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         // D printf("\n");
                         
                         /* skip all remaining trips if it starts later than our best known arrival_time */
-                        if (route_trips[this_trip].begin_time >= router->best_time[req->to]) break;
+                        if (route_trips[this_trip].begin_time >= router->best_time[router->target]) break;
                         
                         /* skip this trip if it is not running on the current service day */
                         if ( ! (serviceday->mask & trip_masks[this_trip])) continue;
