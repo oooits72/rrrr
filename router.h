@@ -49,6 +49,7 @@ struct router {
     uint32_t target;
     calendar_t day_mask;
     serviceday_t servicedays[3];
+    router_request_t reversed_requests[RRRR_MAX_ROUNDS];
     // We should move more routing state in here, like round and sub-scratch pointers.
 };
 
@@ -138,7 +139,6 @@ struct plan {
     struct itinerary itineraries[RRRR_MAX_ROUNDS];
 };
 
-
 /* FUNCTION PROTOTYPES */
 
 void router_setup(router_t*, tdata_t*);
@@ -162,6 +162,8 @@ void router_round(router_t *router, router_request_t *req, uint8_t round);
 void router_result_to_plan (struct plan *, router_t *, router_request_t *);
 
 uint32_t router_result_dump(router_t*, router_request_t*, char *buf, uint32_t buflen); // return num of chars written
+
+uint32_t router_reverse_results();
 
 void router_request_from_epoch(router_request_t *req, tdata_t *tdata, time_t epochtime);
 

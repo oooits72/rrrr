@@ -6,19 +6,33 @@
 
 #define OUTPUT_LEN 8000
 
-void reversal (tdata_t *tdata, router_request_t *req, bool verbose) {
+void reversal (tdata_t *tdata, router_request_t *original_request, bool verbose) {
 
     /* Initialize router */
     router_t router;
     router_setup (&router, tdata);
 
     char result_buf[OUTPUT_LEN];
-    router_route (&router, req);
+
+    LinkedList *request_queue = LinkedList_new ();
+    LinkedList_enqueue (request_queue, original_request);
+
+    while (LinkedList_size (request_queue) > 0) {
+        router_request *request = LinkedList_pop (request_queue);
+        router_route (&router, req);
+        struct plan plan;
+        router_result_to_plan (&plan, router, req); // req included to supply original request
+        for (int i = 0; i < plan.n_itineraries; ++i) {
+            plan.itineraries[i]
+        }
+    }
+    
     if (verbose) {
         router_request_dump (&router, req);
         router_result_dump(&router, &req, result_buf, OUTPUT_LEN);
         printf("%s", result_buf);
     }
+
 
     /* Repeat search in reverse to compress transfers */
     uint32_t n_reversals = req.arrive_by ? 1 : 2;

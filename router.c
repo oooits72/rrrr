@@ -1162,3 +1162,29 @@ time_t req_to_epoch (router_request_t *req, tdata_t *tdata, struct tm *tm_out) {
 
     return seconds;
 }
+
+
+/* 
+   Reverse the direction of the search leaving most request parameters unchanged but applying time 
+   and transfer cutoffs based on an existing results for the same request. 
+   Returns the number of reversed requests produced. 
+*/
+uint32_t router_reverse_results(router_t *router) {
+    uint32_t n_reversed = 0;
+    router_state_t (*states)[router->tdata->n_stops] = (router_state_t(*)[]) (router->states);
+    uint32_t stop = (req->arrive_by ? req->from : req->to);
+    for (uint32_t round = 0; round < RRRR_MAX_ROUNDS; ++round) {
+        if (states[round][stop].walk_time != UNREACHED) {
+            router_request_t *req = &(router->reversed_requests[n_reversed]);
+            memcpy (req, &(router->request), sizeof (router_reqeust_t));
+            req->max_transfers = round;
+            req->time_cutoff = req->time;
+            req->time = states[round][stop].walk_time;
+            req->arrive_by = !(req->arrive_by);
+            // router_request_dump(router, req);
+            n_reversed += 1;            
+        }
+    }
+    return n_reversed;
+}
+
