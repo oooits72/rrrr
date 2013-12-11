@@ -17,7 +17,7 @@
 // TODO: Max transfer time to avoid unnecessary branching?
 
 // bind does not work with names (localhost) but does work with * (all interfaces)
-#define CLIENT_ENDPOINT "tcp://127.0.0.1:9292"
+#define CLIENT_ENDPOINT "tcp://0.0.0.0:9292"
 #define WORKER_ENDPOINT "tcp://127.0.0.1:9293"
 
 // use named pipes instead
