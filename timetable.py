@@ -195,6 +195,57 @@ def write_header () :
     
 # Seek past the end of the header, which will be written last when all offsets are known.
 out.seek(struct_header.size)
+  
+print "building trip bundles"
+all_routes = db.compile_trip_bundles(reporter=sys.stdout) # slow call
+# A route ("TripBundle") may have many service_ids, and often runs only some days or none at all.
+# Throw out routes and trips that do not occur during this calendar period,
+# and record active-days-bitmasks for each route, allowing us to filter out inactive routes on a specific search day.
+route_mask_for_idx = [] # one active-days-bitmask for each route (bundle of trips)
+route_for_idx = []
+route_n_stops = [] # number of stops in each route
+route_n_trips = [] # number of trips in each route
+route_min_time = []
+route_max_time = []
+used_stopids = set([])
+n_trips_total = 0
+n_trips_removed = 0
+n_routes_removed = 0
+for route in all_routes :
+    route_mask = 0
+    running_trip_ids = []
+    n_trips_total += len(route.trip_ids)
+    for trip_id in route.trip_ids :
+        try :
+            service_id = service_id_for_trip_id [trip_id]
+            trip_mask = bitmask_for_sid[service_id]
+            route_mask |= trip_mask
+            if trip_mask != 0 :
+                running_trip_ids.append(trip_id)
+            else :
+                n_trips_removed += 1
+        except KeyError:
+            continue # might this accidentally get the lists out of sync?
+    # print 'mask for all trips is {:032b}'.format(route_mask)
+    if route_mask != 0 :
+        used_stopids.update(route.pattern.stop_ids)
+        route.trip_ids = running_trip_ids
+        route_for_idx.append(route)
+        route_mask_for_idx.append(route_mask)
+        route_n_stops.append(len(route.pattern.stop_ids))
+        route_n_trips.append(len(running_trip_ids))
+        min_time, max_time = route.find_time_range()
+        route_min_time.append(min_time >> 2)
+        route_max_time.append(max_time >> 2)
+    else :
+        n_routes_removed += 1
+nroutes = len(route_for_idx) # this is the final culled list of routes
+print '%d / %d routes had running services, %d / %d trips removed' % (nroutes, len(all_routes), n_trips_removed, n_trips_total)
+del all_routes, n_trips_total, n_trips_removed, n_routes_removed
+route_n_stops.append(0) # sentinel
+route_n_trips.append(0) # sentinel
+route_min_time.append(0) # sentinel
+route_max_time.append(0) # sentinel
 
 print "building stop indexes and coordinate list"
 # establish a mapping between sorted stop ids and integer indexes (allowing binary search later)
@@ -227,6 +278,8 @@ nameloc_for_idx = []
 namesize = 0
 platformcode_for_idx = []
 for sid, name, lat, lon, platform_code in db.stops() :
+    if sid not in used_stopids:
+        continue
     platform_code = platform_code or ''
     idx_for_stop_id[sid] = idx
     stop_id_for_idx.append(sid)
@@ -248,55 +301,6 @@ assert len(nameloc_for_idx) == idx
 conn.commit()
 conn.close()
 del stopnames
-    
-print "building trip bundles"
-all_routes = db.compile_trip_bundles(reporter=sys.stdout) # slow call
-# A route ("TripBundle") may have many service_ids, and often runs only some days or none at all.
-# Throw out routes and trips that do not occur during this calendar period,
-# and record active-days-bitmasks for each route, allowing us to filter out inactive routes on a specific search day.
-route_mask_for_idx = [] # one active-days-bitmask for each route (bundle of trips)
-route_for_idx = []
-route_n_stops = [] # number of stops in each route
-route_n_trips = [] # number of trips in each route
-route_min_time = []
-route_max_time = []
-n_trips_total = 0
-n_trips_removed = 0
-n_routes_removed = 0
-for route in all_routes :
-    route_mask = 0
-    running_trip_ids = []
-    n_trips_total += len(route.trip_ids)
-    for trip_id in route.trip_ids :
-        try :
-            service_id = service_id_for_trip_id [trip_id]
-            trip_mask = bitmask_for_sid[service_id]
-            route_mask |= trip_mask
-            if trip_mask != 0 :
-                running_trip_ids.append(trip_id)
-            else :
-                n_trips_removed += 1
-        except KeyError:
-            continue # might this accidentally get the lists out of sync?
-    # print 'mask for all trips is {:032b}'.format(route_mask)
-    if route_mask != 0 :
-        route.trip_ids = running_trip_ids
-        route_for_idx.append(route)
-        route_mask_for_idx.append(route_mask)
-        route_n_stops.append(len(route.pattern.stop_ids))
-        route_n_trips.append(len(running_trip_ids))
-        min_time, max_time = route.find_time_range()
-        route_min_time.append(min_time >> 2)
-        route_max_time.append(max_time >> 2)
-    else :
-        n_routes_removed += 1
-nroutes = len(route_for_idx) # this is the final culled list of routes
-print '%d / %d routes had running services, %d / %d trips removed' % (nroutes, len(all_routes), n_trips_removed, n_trips_total)
-del all_routes, n_trips_total, n_trips_removed, n_routes_removed
-route_n_stops.append(0) # sentinel
-route_n_trips.append(0) # sentinel
-route_min_time.append(0) # sentinel
-route_max_time.append(0) # sentinel
 
 # We have two definitions of "route".
 # GTFS routes are totally arbitrary groups of trips (but fortunately NL GTFS routes correspond with 
@@ -516,11 +520,14 @@ transfers_offsets = []
 for from_idx, from_sid in enumerate(stop_id_for_idx) :
     transfers_offsets.append(offset)
     for from_sid, to_sid, ttype, ttime in db.gettransfers(from_sid,maxdistance=MAX_DISTANCE):
-        if ttime == None :
-            continue # skip non-time/non-distance transfers for now
-        to_idx = idx_for_stop_id[to_sid]
-        writeint(to_idx)
-        offset += 1
+        try:
+            to_idx = idx_for_stop_id[to_sid]
+            if ttime == None :
+                continue # skip non-time/non-distance transfers for now
+            writeint(to_idx)
+            offset += 1
+        except KeyError:
+            continue # Transfers to non-existing stops
 transfers_offsets.append(offset) # sentinel
 assert len(transfers_offsets) == nstops + 1
 
@@ -532,12 +539,15 @@ transfers_offsets = []
 for from_idx, from_sid in enumerate(stop_id_for_idx) :
     transfers_offsets.append(offset)
     for from_sid, to_sid, ttype, ttime in db.gettransfers(from_sid,maxdistance=MAX_DISTANCE):
-        if ttime == None :
-            continue # skip non-time/non-distance transfers for now
-        to_idx = idx_for_stop_id[to_sid]
-        # Store distances in units of 16 meters (rounding by adding 8)
-        writebyte((int(ttime) + 8) >> 4)
-        offset += 1
+        try:
+            to_idx = idx_for_stop_id[to_sid]
+            if ttime == None :
+                continue # skip non-time/non-distance transfers for now
+            # Store distances in units of 16 meters (rounding by adding 8)
+            writebyte((int(ttime) + 8) >> 4)
+            offset += 1
+        except KeyError:
+            continue # Transfers to non-existing stops
 transfers_offsets.append(offset) # sentinel
 assert len(transfers_offsets) == nstops + 1
                                        
