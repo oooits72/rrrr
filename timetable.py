@@ -13,13 +13,13 @@ import pytz
 MAX_DISTANCE = 801
 
 if len(sys.argv) < 2 :
-    USAGE = """usage: timetable.py inputfile.gtfsdb [calendar start date] 
-    If a start date is provided in YYYY-MM-DD format, a calendar will be built for the 32 days following the given date. 
+    USAGE = """usage: timetable.py inputfile.gtfsdb [calendar start date]
+    If a start date is provided in YYYY-MM-DD format, a calendar will be built for the 32 days following the given date.
     Otherwise the service calendar will be analyzed and the month with the maximum number of running services will be used."""
     print USAGE
     exit(1)
 
-db = GTFSDatabase(sys.argv[1])    
+db = GTFSDatabase(sys.argv[1])
 
 out = open("./timetable.dat", "wb")
 
@@ -51,7 +51,7 @@ print 'epoch time at which calendar starts: %d' % calendar_start_time
 
 sids = db.service_ids()
 print '%d distinct service IDs' % len(sids)
-                    
+
 bitmask_for_sid = {}
 dst_mask = 0
 for sid in sids :
@@ -73,8 +73,8 @@ for day_offset in range(32) :
 
 #for sid in sids :
 #    print '{:<5s} {:032b}'.format(sid, bitmask_for_sid[sid])
-        
-service_id_for_trip_id = {}        
+
+service_id_for_trip_id = {}
 for tid, sid in db.tripids_in_serviceperiods() :
     service_id_for_trip_id [tid] = sid
 
@@ -93,9 +93,9 @@ def writebyte(x) :
     out.write(struct_1B.pack(x));
 
 struct_2H = Struct('HH') # a two UNSIGNED shorts
-def write_2ushort(x, y) : 
+def write_2ushort(x, y) :
     out.write(struct_2H.pack(x, y));
-        
+
 struct_2f = Struct('2f') # 2 floats
 def write2floats(x, y) :
     out.write(struct_2f.pack(x, y));
@@ -105,13 +105,13 @@ def align(width=4) :
     pos = out.tell()
     n_padding_bytes = (width - (pos % width)) % width
     out.write('%' * n_padding_bytes)
-    
+
 def tell() :
     """ Display the current output file position in a human-readable format, then return that position in bytes. """
     pos = out.tell()
     if pos > 1024 * 1024 :
         text = '%0.2f MB' % (pos / 1024.0 / 1024.0)
-    else :  
+    else :
         text = '%0.2f kB' % (pos / 1024.0)
     print "  at position %d in output [%s]" % (pos, text)
     return pos
@@ -119,7 +119,7 @@ def tell() :
 def write_text_comment(string) :
     """ Write a text block to the file, just to help indentify segment boundaries, and align. """
     string = '|| {:s} ||'.format(string)
-    out.write(string) 
+    out.write(string)
     align()
 
 def write_string_table(strings) :
@@ -132,7 +132,7 @@ def write_string_table(strings) :
     Note: Later we could use fixed width non-null-terminated string: printf("%.*s", length, string); or fwrite();
     """
     # sort a copy of the string list
-    # strings = list(strings) 
+    # strings = list(strings)
     # strings.sort()
     width = 0;
     for s in strings :
@@ -147,12 +147,12 @@ def write_string_table(strings) :
         out.write(padding)
     return loc
 
-# make this into a method on a Header class 
+# make this into a method on a Header class
 # On 64-bit architectures using gcc long int is at least an int64_t.
 # We were using L in platform dependent mode, which just happened to work. TODO switch to platform independent mode?
-struct_header = Struct('8sQ30I') 
+struct_header = Struct('8sQ30I')
 def write_header () :
-    """ Write out a file header containing offsets to the beginning of each subsection. 
+    """ Write out a file header containing offsets to the beginning of each subsection.
     Must match struct transit_data_header in transitdata.c """
     out.seek(0)
     htext = "TTABLEV2"
@@ -167,7 +167,7 @@ def write_header () :
         loc_stop_coords,
         loc_routes,
         loc_route_stops,
-        loc_route_stop_attributes, 
+        loc_route_stop_attributes,
         loc_timedemandgroups,
         loc_trips,
         loc_trip_attributes,
@@ -192,7 +192,7 @@ def write_header () :
     out.write(packed)
 
 ### Begin writing out file ###
-    
+
 # Seek past the end of the header, which will be written last when all offsets are known.
 out.seek(struct_header.size)
 
@@ -248,7 +248,7 @@ assert len(nameloc_for_idx) == idx
 conn.commit()
 conn.close()
 del stopnames
-    
+
 print "building trip bundles"
 all_routes = db.compile_trip_bundles(reporter=sys.stdout) # slow call
 # A route ("TripBundle") may have many service_ids, and often runs only some days or none at all.
@@ -299,11 +299,11 @@ route_min_time.append(0) # sentinel
 route_max_time.append(0) # sentinel
 
 # We have two definitions of "route".
-# GTFS routes are totally arbitrary groups of trips (but fortunately NL GTFS routes correspond with 
+# GTFS routes are totally arbitrary groups of trips (but fortunately NL GTFS routes correspond with
 # rider notions of a route).
-# RAPTOR routes are what Graphserver calls trip bundles and OTP calls stop patterns and Transmodel 
+# RAPTOR routes are what Graphserver calls trip bundles and OTP calls stop patterns and Transmodel
 # calls JOURNEYPATTERNs: an ordered sequence of stops.
-# We want one descriptive string per route, in the RAPTOR sense, which should amount to one string 
+# We want one descriptive string per route, in the RAPTOR sense, which should amount to one string
 # per GTFS route per direction.
 route_ids_for_idx = []
 route_attributes = []
@@ -359,7 +359,7 @@ for route in route_for_idx :
         idx_for_productcategory[productcategory] = productcategory_offset
     productcategory_offsets.append(productcategory_offset)
 route_attributes.append(0) # sentinel
-agency_offsets.append(0) # sentinel  
+agency_offsets.append(0) # sentinel
 headsign_offsets.append(0) # sentinel
 shortname_offsets.append(0) # sentinel
 productcategory_offsets.append(0) # sentinel
@@ -380,7 +380,7 @@ for idx, route in enumerate(route_for_idx) :
         else :
             print "route references unknown stop %s" % sid
             writeint(-1)
-        offset += 1 
+        offset += 1
 route_stops_offsets.append(offset) # sentinel
 assert len(route_stops_offsets) == nroutes + 1
 
@@ -400,7 +400,7 @@ for idx, route in enumerate(route_for_idx) :
         if drop_off_type != 1:
             attr |= 4
         writebyte(attr)
-    offset += 1 
+    offset += 1
 route_stops_attributes_offsets.append(offset) # sentinel
 assert len(route_stops_attributes_offsets) == nroutes + 1
 
@@ -468,7 +468,7 @@ for idx, route in enumerate(route_for_idx) :
         # by right-shifting all times two bits we get 72 hours (3 days) at 4 second resolution
         # The last struct member is a realtime offset. The space is not wasted since it would be needed as struct padding anyway.
         out.write(trip_t.pack(timedemandgroups_offsets[timedemandgroupref], first_departure >> 2, 0))
-        toffset += 1 
+        toffset += 1
     all_trip_ids.extend(trip_ids)
     tioffset += len(trip_ids)
 trips_offsets.append(toffset) # sentinel
@@ -476,7 +476,7 @@ trip_ids_offsets.append(tioffset) # sentinel
 assert len(trips_offsets) == nroutes + 1
 assert len(trip_ids_offsets) == nroutes + 1
 
-print "writing trip attributes" 
+print "writing trip attributes"
 write_text_comment("TRIP ATTRIBUTES")
 loc_trip_attributes = tell()
 for idx, route in enumerate(route_for_idx):
@@ -503,7 +503,7 @@ for idx in range(nstops) :
     if sid in stop_routes :
         for route_idx in stop_routes[sid] :
             writeint(route_idx)
-            offset += 1 
+            offset += 1
 stop_routes_offsets.append(offset) # sentinel
 assert len(stop_routes_offsets) == nstops + 1
 del stop_routes
@@ -540,7 +540,7 @@ for from_idx, from_sid in enumerate(stop_id_for_idx) :
         offset += 1
 transfers_offsets.append(offset) # sentinel
 assert len(transfers_offsets) == nstops + 1
-                                       
+
 print "saving stop indexes"
 write_text_comment("STOP STRUCTS")
 loc_stops = tell()
@@ -564,7 +564,7 @@ write_text_comment("ROUTE STRUCTS")
 loc_routes = tell()
 route_t = Struct('3I8H')
 route_t_fields = [route_stops_offsets, trip_ids_offsets,headsign_offsets, route_n_stops, route_n_trips,route_attributes,agency_offsets,shortname_offsets,productcategory_offsets,route_min_time, route_max_time]
-# check that all list lengths match the total number of routes. 
+# check that all list lengths match the total number of routes.
 for l in route_t_fields :
     # the extra last route is a sentinel so we can derive list lengths for the last true route.
     assert len(l) == nroutes + 1
@@ -572,7 +572,7 @@ for route in zip (*route_t_fields) :
     # print route
     out.write(route_t.pack(*route));
 
-print "writing bitfields indicating which days each trip is active" 
+print "writing bitfields indicating which days each trip is active"
 # note that bitfields are ordered identically to the trip_ids table, and offsets into that table can be reused
 write_text_comment("TRIP ACTIVE BITFIELDS")
 loc_trip_active = tell()
@@ -591,7 +591,7 @@ for trip_id in all_trip_ids :
 print '(%d / %d bitmasks were zero)' % ( n_zeros, len(all_trip_ids) )
 
 
-print "writing bitfields indicating which days each route is active" 
+print "writing bitfields indicating which days each route is active"
 write_text_comment("ROUTE ACTIVE BITFIELDS")
 loc_route_active = tell()
 n_zeros = 0
@@ -611,7 +611,7 @@ stop_names = sorted(nameloc_for_name.iteritems(), key=operator.itemgetter(1))
 loc_stop_names = tell()
 for stop_name,nameloc in stop_names:
     assert nameloc == out.tell() - loc_stop_names
-    out.write(stop_name+'\0')  
+    out.write(stop_name+'\0')
 
 print "writing out locations for stopnames"
 write_text_comment("STOP NAME LOCATIONS")
@@ -671,8 +671,8 @@ print "writing out sorted stop ids to string table"
 write_text_comment("STOP IDS")
 loc_stop_ids = write_string_table(stop_id_for_idx)
 
-print "writing trip ids to string table" 
-# note that trip_ids are ordered by departure time within trip bundles (routes), which are themselves in arbitrary order. 
+print "writing trip ids to string table"
+# note that trip_ids are ordered by departure time within trip bundles (routes), which are themselves in arbitrary order.
 write_text_comment("TRIP IDS")
 loc_trip_ids = write_string_table(all_trip_ids)
 
@@ -681,6 +681,6 @@ write_text_comment("END TTABLEV2")
 loc_eof = tell()
 print "rewinding and writing header... ",
 write_header()
-   
+
 print "done."
 out.close();
