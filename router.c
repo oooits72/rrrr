@@ -274,6 +274,7 @@ static void service_day_dump (serviceday_t *serviceday) {
     printf ("real-time: %s \n\n", serviceday->apply_realtime ? "YES" : "NO");
 }
 
+#if 0 /* These functions are not required anymore in this implementation */
 static inline rtime_t
 tdata_depart (tdata_t* td, trip_t *trip, uint32_t route_stop) {
     return trip->begin_time + td->stop_times[trip->stop_times_offset + route_stop].departure;
@@ -283,26 +284,70 @@ static inline rtime_t
 tdata_arrive (tdata_t* td, trip_t *trip, uint32_t route_stop) {
     return trip->begin_time + td->stop_times[trip->stop_times_offset + route_stop].arrival;
 }
+#endif
 
 /* Get the departure or arrival time of the given trip on the given service day, applying realtime data as needed. */
 static inline rtime_t
 tdata_stoptime (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, uint32_t route_stop, bool arrive, serviceday_t *serviceday) {
     rtime_t time, time_adjusted;
-    trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
-    if (arrive) time = tdata_arrive(tdata, trip, route_stop);
-    else           time = tdata_depart(tdata, trip, route_stop);
+    stoptime_t *trip_times;
+
+    /* This code is only required if want realtime support in the journey planner */
+    #ifdef RRRR_REALTIME
+
+    /* given that we are at a serviceday the realtime scope applies to */
+    if (serviceday->apply_realtime) {
+
+        /* This code applies when the realtime data source is time-expanded */
+        #ifdef RRRR_REALTIME_EXPANDED
+
+        /* the expanded stoptimes can be found at the same row as the trip */
+        trip_times = tdata->trip_stoptimes[tdata->routes[route_idx].trip_ids_offset + trip_offset];
+
+        /* if the expanded stoptimes have been added, the begin_time is precalculated */
+        if (trip_times) {
+            time = 0;
+        } else
+        #endif /* RRRR_REALTIME_EXPANDED */
+
+        /* if the expanded stoptimes have not been added, or our source is not time-expanded */
+        {
+            trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
+            trip_times = &tdata->stop_times[trip->stop_times_offset];
+
+            /* if punctuality is provided, we will apply it naively to all stops */
+            #ifdef RRRR_REALTIME_DELAY
+            time = trip->begin_time + trip->realtime_delay;
+            #else
+            time = trip->begin_time;
+            #endif /* RRRR_REALTIME_DELAY */
+        }
+    }
+    #endif /* RRRR_REALTIME */
+    {
+        trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
+        trip_times = &tdata->stop_times[trip->stop_times_offset];
+        time = trip->begin_time;
+    }
+
+    if (arrive) {
+        time += trip_times[route_stop].arrival;
+    } else {
+        time += trip_times[route_stop].departure;
+    }
+
     time_adjusted = time + serviceday->midnight;
+
     /*
     printf ("boarding at stop %d, time is: %s \n", route_stop, timetext (time));
     printf ("   after adjusting: %s \n", timetext (time_adjusted));
     printf ("   midnight: %d \n", serviceday->midnight);
     printf ("   delay (4sec): %d \n", trip->realtime_delay);
     */
+
     /* Detect overflow (this will still not catch wrapping due to negative delays on small positive times) */
     // actually this happens naturally with times like '03:00+1day' transposed to serviceday 'tomorrow'
     if (time_adjusted < time) return UNREACHED;
-    /* Apply real time delay on the relevant days. */
-    if (serviceday->apply_realtime) time_adjusted += trip->realtime_delay;
     return time_adjusted;
 }
 
