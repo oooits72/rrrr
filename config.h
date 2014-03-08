@@ -50,3 +50,11 @@
 #endif
 
 #define FEATURE_AGENCY_FILTER 1
+
+#define RRRR_REALTIME 1
+
+#ifdef RRRR_REALTIME
+#define RRRR_DYNAMIC_SLACK 1
+#define RRRR_REALTIME_EXPANDED 1
+#define RRRR_REALTIME_DELAY 1
+#endif
