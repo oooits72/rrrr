@@ -155,13 +155,37 @@ def write_header () :
     """ Write out a file header containing offsets to the beginning of each subsection.
     Must match struct transit_data_header in transitdata.c """
     out.seek(0)
-    htext = "TTABLEV2"
+    htext = "TTABLEV3"
     packed = struct_header.pack(htext,
         calendar_start_time,
         dst_mask,
         nstops,
+        nstops,
+        nstops,
         nroutes,
+        nroute_stops,
+        nroute_stops,
+        nstoptimes,
+        ntrips,
+        ntrips,
+        nstop_routes,
+        nstops,
+        nstops,
+        ntrips,
+        nroutes,
+        len(platformcode_for_idx),
+        len(namesize),
+        len(nameloc_for_idx) + 1,
+        len(agencyIds),
+        len(agencyNames),
+        len(agencyUrls),
+        headsigncount,
+        len(idx_for_shortname),
+        len(idx_for_productcategory),
+        len(route_ids_for_idx),
+        len(stop_id_for_idx),
         len(all_trip_ids),
+
         loc_stops,
         loc_stop_attributes,
         loc_stop_coords,
@@ -370,18 +394,18 @@ productcategory_offsets.append(0) # sentinel
 print "saving the stops in each route"
 write_text_comment("STOPS BY ROUTE")
 loc_route_stops = tell()
-offset = 0
+nroute_stops = 0
 route_stops_offsets = []
 for idx, route in enumerate(route_for_idx) :
-    route_stops_offsets.append(offset)
+    route_stops_offsets.append(nroute_stops)
     for sid in route.pattern.stop_ids :
         if sid in idx_for_stop_id :
             writeint(idx_for_stop_id[sid])
         else :
             print "route references unknown stop %s" % sid
             writeint(-1)
-        offset += 1
-route_stops_offsets.append(offset) # sentinel
+        nroute_stops += 1
+route_stops_offsets.append(nroute_stops) # sentinel
 assert len(route_stops_offsets) == nroutes + 1
 
 print "saving attributes of stops in each route"
@@ -415,7 +439,7 @@ def time_string_from_seconds(sec) :
 print "saving a list of timedemandgroups"
 write_text_comment("TIMEDEMANDGROUPS")
 loc_timedemandgroups = tell()
-offset = 0
+nstoptimes = 0
 timedemandgroups_offsets = {} # the offset into the stoptimes for each timedemandgroup ID
 timedemandgroups_written = {}
 timedemandgroup_t = Struct('HH')
@@ -426,11 +450,11 @@ for idx, route in enumerate(route_for_idx) :
         if str(times) in timedemandgroups_written:
             timedemandgroups_offsets[timedemandgroupref] = timedemandgroups_written[str(times)]
         else:
-            timedemandgroups_offsets[timedemandgroupref] = offset
-            timedemandgroups_written[str(times)] = offset
+            timedemandgroups_offsets[timedemandgroupref] = nstoptimes
+            timedemandgroups_written[str(times)] = nstoptimes
             for totaldrivetime, stopwaittime in times:
                 out.write(timedemandgroup_t.pack(totaldrivetime >> 2, (totaldrivetime + stopwaittime) >> 2))
-                offset += 1
+                nstoptimes += 1
             prev_time = None
             # coherency check: stoptimes should be increasing
             for time in times:
@@ -475,6 +499,7 @@ trips_offsets.append(toffset) # sentinel
 trip_ids_offsets.append(tioffset) # sentinel
 assert len(trips_offsets) == nroutes + 1
 assert len(trip_ids_offsets) == nroutes + 1
+ntrips = len(all_trip_ids)
 
 print "writing trip attributes"
 write_text_comment("TRIP ATTRIBUTES")
@@ -495,16 +520,16 @@ for idx, route in enumerate(route_for_idx) :
         if sid not in stop_routes :
             stop_routes[sid] = []
         stop_routes[sid].append(idx)
-offset = 0
+nstop_routes = 0
 stop_routes_offsets = []
 for idx in range(nstops) :
-    stop_routes_offsets.append(offset)
+    stop_routes_offsets.append(nstop_routes)
     sid = stop_id_for_idx[idx]
     if sid in stop_routes :
         for route_idx in stop_routes[sid] :
             writeint(route_idx)
-            offset += 1
-stop_routes_offsets.append(offset) # sentinel
+            nstop_routes += 1
+stop_routes_offsets.append(nstop_routes) # sentinel
 assert len(stop_routes_offsets) == nstops + 1
 del stop_routes
 
@@ -677,7 +702,7 @@ write_text_comment("TRIP IDS")
 loc_trip_ids = write_string_table(all_trip_ids)
 
 print "reached end of timetable file"
-write_text_comment("END TTABLEV2")
+write_text_comment("END TTABLEV3")
 loc_eof = tell()
 print "rewinding and writing header... ",
 write_header()

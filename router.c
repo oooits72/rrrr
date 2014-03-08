@@ -241,7 +241,7 @@ void dump_trips(router_t *router) {
     uint32_t n_routes = router->tdata->n_routes;
     for (uint32_t ridx = 0; ridx < n_routes; ++ridx) {
         route_t route = router->tdata->routes[ridx];
-        char (*trip_ids)[router->tdata->trip_id_width] = (void*)
+        char (*trip_ids)[router->tdata->trip_ids_width] = (void*)
             tdata_trip_ids_for_route(router->tdata, ridx);
         calendar_t *trip_masks = tdata_trip_masks_for_route(router->tdata, ridx);
         printf ("route %d (of %d), n trips %d, n stops %d\n", ridx, n_routes, route.n_trips, route.n_stops);

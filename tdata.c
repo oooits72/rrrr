@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <string.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -23,10 +25,34 @@ struct tdata_header {
     char version_string[8]; // should read "TTABLEV1"
     uint64_t calendar_start_time;
     calendar_t dst_active;
+
     uint32_t n_stops;
+    uint32_t n_stop_attributes;
+    uint32_t n_stop_coords;
     uint32_t n_routes;
+    uint32_t n_route_stops;
+    uint32_t n_route_stop_attributes;
+    uint32_t n_stop_times;
     uint32_t n_trips;
-    /* uint32_t n_agencies; */
+    uint32_t n_trip_attributes;
+    uint32_t n_stop_routes;
+    uint32_t n_transfer_target_stops;
+    uint32_t n_transfer_dist_meters;
+    uint32_t n_trip_active;
+    uint32_t n_route_active;
+    uint32_t n_platformcodes;
+    uint32_t n_stop_names;
+    uint32_t n_stop_nameidx;
+    uint32_t n_agency_ids;
+    uint32_t n_agency_names;
+    uint32_t n_agency_urls;
+    uint32_t n_headsigns;
+    uint32_t n_route_shortnames;
+    uint32_t n_productcategories;
+    uint32_t n_route_ids;
+    uint32_t n_stop_ids;
+    uint32_t n_trip_ids;
+
     uint32_t loc_stops;
     uint32_t loc_stop_attributes;
     uint32_t loc_stop_coords;
@@ -57,11 +83,11 @@ struct tdata_header {
 
 inline char *tdata_route_id_for_index(tdata_t *td, uint32_t route_index) {
     if (route_index == NONE) return "NONE";
-    return td->route_ids + (td->route_id_width * route_index);
+    return td->route_ids + (td->route_ids_width * route_index);
 }
 
 inline char *tdata_stop_id_for_index(tdata_t *td, uint32_t stop_index) {
-    return td->stop_ids + (td->stop_id_width * stop_index);
+    return td->stop_ids + (td->stop_ids_width * stop_index);
 }
 
 inline uint8_t *tdata_stop_attributes_for_index(tdata_t *td, uint32_t stop_index) {
@@ -69,23 +95,23 @@ inline uint8_t *tdata_stop_attributes_for_index(tdata_t *td, uint32_t stop_index
 }
 
 inline char *tdata_trip_id_for_index(tdata_t *td, uint32_t trip_index) {
-    return td->trip_ids + (td->trip_id_width * trip_index);
+    return td->trip_ids + (td->trip_ids_width * trip_index);
 }
 
 inline char *tdata_trip_id_for_route_trip_index(tdata_t *td, uint32_t route_index, uint32_t trip_index) {
-    return td->trip_ids + (td->trip_id_width * (td->routes[route_index].trip_ids_offset + trip_index));
+    return td->trip_ids + (td->trip_ids_width * (td->routes[route_index].trip_ids_offset + trip_index));
 }
 
 inline char *tdata_agency_id_for_index(tdata_t *td, uint32_t agency_index) {
-    return td->agency_ids + (td->agency_id_width * agency_index);
+    return td->agency_ids + (td->agency_ids_width * agency_index);
 }
 
 inline char *tdata_agency_name_for_index(tdata_t *td, uint32_t agency_index) {
-    return td->agency_names + (td->agency_name_width * agency_index);
+    return td->agency_names + (td->agency_names_width * agency_index);
 }
 
 inline char *tdata_agency_url_for_index(tdata_t *td, uint32_t agency_index) {
-    return td->agency_urls + (td->agency_url_width * agency_index);
+    return td->agency_urls + (td->agency_urls_width * agency_index);
 }
 
 inline char *tdata_headsign_for_offset(tdata_t *td, uint32_t headsign_offset) {
@@ -93,11 +119,11 @@ inline char *tdata_headsign_for_offset(tdata_t *td, uint32_t headsign_offset) {
 }
 
 inline char *tdata_route_shortname_for_index(tdata_t *td, uint32_t route_shortname_index) {
-    return td->route_shortnames + (td->route_shortname_width * route_shortname_index);
+    return td->route_shortnames + (td->route_shortnames_width * route_shortname_index);
 }
 
 inline char *tdata_productcategory_for_index(tdata_t *td, uint32_t productcategory_index) {
-    return td->productcategories + (td->productcategory_width * productcategory_index);
+    return td->productcategories + (td->productcategories_width * productcategory_index);
 }
 
 inline char *tdata_stop_name_for_index(tdata_t *td, uint32_t stop_index) {
@@ -118,7 +144,7 @@ inline char *tdata_platformcode_for_index(tdata_t *td, uint32_t stop_index) {
     case ONBOARD :
         return NULL;
     default :
-        return td->platformcodes + (td->platformcode_width * stop_index);
+        return td->platformcodes + (td->platformcodes_width * stop_index);
     }
 }
 
@@ -133,7 +159,7 @@ inline uint32_t tdata_stopidx_by_stop_name(tdata_t *td, char* stop_desc, uint32_
 
 inline uint32_t tdata_stopidx_by_stop_id(tdata_t *td, char* stop_id, uint32_t start_index) {
     for (uint32_t stop_index = start_index; stop_index < td->n_stops; stop_index++) {
-        if (strcasestr(td->stop_ids + (td->stop_id_width * stop_index), stop_id)) {
+        if (strcasestr(td->stop_ids + (td->stop_ids_width * stop_index), stop_id)) {
             return stop_index;
         }
     }
@@ -142,7 +168,7 @@ inline uint32_t tdata_stopidx_by_stop_id(tdata_t *td, char* stop_id, uint32_t st
 
 inline uint32_t tdata_routeidx_by_route_id(tdata_t *td, char* route_id, uint32_t start_index) {
     for (uint32_t route_index = start_index; route_index < td->n_routes; route_index++) {
-        if (strcasestr(td->route_ids + (td->route_id_width * route_index), route_id)) {
+        if (strcasestr(td->route_ids + (td->route_ids_width * route_index), route_id)) {
             return route_index;
         }
     }
@@ -151,7 +177,7 @@ inline uint32_t tdata_routeidx_by_route_id(tdata_t *td, char* route_id, uint32_t
 
 inline char *tdata_trip_ids_for_route(tdata_t *td, uint32_t route_index) {
     route_t route = (td->routes)[route_index];
-    uint32_t char_offset = route.trip_ids_offset * td->trip_id_width;
+    uint32_t char_offset = route.trip_ids_offset * td->trip_ids_width;
     return td->trip_ids + char_offset;
 }
 
@@ -169,18 +195,18 @@ inline char *tdata_headsign_for_route(tdata_t *td, uint32_t route_index) {
 inline char *tdata_shortname_for_route(tdata_t *td, uint32_t route_index) {
     if (route_index == NONE) return "NONE";
     route_t route = (td->routes)[route_index];
-    return td->route_shortnames + (td->route_shortname_width * route.shortname_index);
+    return td->route_shortnames + (td->route_shortnames_width * route.shortname_index);
 }
 
 inline char *tdata_productcategory_for_route(tdata_t *td, uint32_t route_index) {
     if (route_index == NONE) return "NONE";
     route_t route = (td->routes)[route_index];
-    return td->productcategories + (td->productcategory_width * route.productcategory_index);
+    return td->productcategories + (td->productcategories_width * route.productcategory_index);
 }
 
 inline uint32_t tdata_agencyidx_by_agency_name(tdata_t *td, char* agency_name, uint32_t start_index) {
-    for (uint32_t agency_index = start_index; agency_index < td->n_agencies; agency_index++) {
-        if (strcasestr(td->agency_names + (td->agency_name_width * agency_index), agency_name)) {
+    for (uint32_t agency_index = start_index; agency_index < td->n_agency_names; agency_index++) {
+        if (strcasestr(td->agency_names + (td->agency_names_width * agency_index), agency_name)) {
             return agency_index;
         }
     }
@@ -190,19 +216,19 @@ inline uint32_t tdata_agencyidx_by_agency_name(tdata_t *td, char* agency_name, u
 inline char *tdata_agency_id_for_route(tdata_t *td, uint32_t route_index) {
     if (route_index == NONE) return "NONE";
     route_t route = (td->routes)[route_index];
-    return td->agency_ids + (td->agency_id_width * route.agency_index);
+    return td->agency_ids + (td->agency_ids_width * route.agency_index);
 }
 
 inline char *tdata_agency_name_for_route(tdata_t *td, uint32_t route_index) {
     if (route_index == NONE) return "NONE";
     route_t route = (td->routes)[route_index];
-    return td->agency_names + (td->agency_name_width * route.agency_index);
+    return td->agency_names + (td->agency_names_width * route.agency_index);
 }
 
 inline char *tdata_agency_url_for_route(tdata_t *td, uint32_t route_index) {
     if (route_index == NONE) return "NONE";
     route_t route = (td->routes)[route_index];
-    return td->agency_urls + (td->agency_url_width * route.agency_index);
+    return td->agency_urls + (td->agency_urls_width * route.agency_index);
 }
 
 void tdata_check_coherent (tdata_t *tdata) {
@@ -276,6 +302,55 @@ void tdata_check_coherent (tdata_t *tdata) {
     printf ("checked %d transfers for symmetry.\n", n_transfers_checked);
 }
 
+void tdata_load_dynamic(char *filename, tdata_t *td) {
+    tdata_header_t h;
+    tdata_header_t *header = &h;
+
+    int fd = open(filename, O_RDONLY);
+    if (fd == -1)
+        die("could not find input file");
+
+    read (fd, &header, sizeof(header));
+
+    td->base = NULL;
+    td->size = 0;
+
+    if( strncmp("TTABLEV3", header->version_string, 8) )
+        die("the input file does not appear to be a timetable or is of the wrong version");
+
+    td->calendar_start_time = header->calendar_start_time;
+    td->dst_active = header->dst_active;
+
+    load_dynamic (fd, stops, stop_t);
+    load_dynamic (fd, stop_attributes, uint8_t);
+    load_dynamic (fd, stop_coords, latlon_t);
+    load_dynamic (fd, routes, route_t);
+    load_dynamic (fd, route_stops, uint32_t);
+    load_dynamic (fd, route_stop_attributes, uint8_t);
+    load_dynamic (fd, stop_times, stoptime_t);
+    load_dynamic (fd, trips, trip_t);
+    load_dynamic (fd, trip_attributes, uint8_t);
+    load_dynamic (fd, stop_routes, uint32_t);
+    load_dynamic (fd, transfer_target_stops, uint32_t);
+    load_dynamic (fd, transfer_dist_meters, uint8_t);
+    load_dynamic (fd, trip_active, calendar_t);
+    load_dynamic (fd, route_active, calendar_t);
+    load_dynamic (fd, headsigns, char);
+    load_dynamic (fd, stop_names, char);
+    load_dynamic (fd, stop_nameidx, uint32_t);
+
+    load_dynamic_string (fd, platformcodes);
+    load_dynamic_string (fd, stop_ids);
+    load_dynamic_string (fd, trip_ids);
+    load_dynamic_string (fd, agency_ids);
+    load_dynamic_string (fd, agency_names);
+    load_dynamic_string (fd, agency_urls);
+    load_dynamic_string (fd, route_shortnames);
+    load_dynamic_string (fd, route_ids);
+    load_dynamic_string (fd, productcategories);
+
+}
+
 /* Map an input file into memory and reconstruct pointers to its contents. */
 void tdata_load(char *filename, tdata_t *td) {
 
@@ -314,38 +389,31 @@ void tdata_load(char *filename, tdata_t *td) {
     td->transfer_target_stops = (uint32_t *) (b + header->loc_transfer_target_stops);
     td->transfer_dist_meters = (uint8_t *) (b + header->loc_transfer_dist_meters);
     //maybe replace with pointers because there's a lot of wasted space?
-    td->platformcode_width = *((uint32_t *) (b + header->loc_platformcodes));
+    td->platformcodes_width = *((uint32_t *) (b + header->loc_platformcodes));
     td->platformcodes = (char*) (b + header->loc_platformcodes + sizeof(uint32_t));
     td->stop_names = (char*) (b + header->loc_stop_names);
     td->stop_nameidx = (uint32_t *) (b + header->loc_stop_nameidx);
-    td->agency_id_width = *((uint32_t *) (b + header->loc_agency_ids));
+    td->agency_ids_width = *((uint32_t *) (b + header->loc_agency_ids));
     td->agency_ids = (char*) (b + header->loc_agency_ids + sizeof(uint32_t));
-    td->agency_name_width = *((uint32_t *) (b + header->loc_agency_names));
+    td->agency_names_width = *((uint32_t *) (b + header->loc_agency_names));
     td->agency_names = (char*) (b + header->loc_agency_names + sizeof(uint32_t));
-    td->agency_url_width = *((uint32_t *) (b + header->loc_agency_urls));
+    td->agency_urls_width = *((uint32_t *) (b + header->loc_agency_urls));
     td->agency_urls = (char*) (b + header->loc_agency_urls + sizeof(uint32_t));
     td->headsigns = (char*) (b + header->loc_headsigns);
-    td->route_shortname_width = *((uint32_t *) (b + header->loc_route_shortnames));
+    td->route_shortnames_width = *((uint32_t *) (b + header->loc_route_shortnames));
     td->route_shortnames = (char*) (b + header->loc_route_shortnames + sizeof(uint32_t));
-    td->productcategory_width = *((uint32_t *) (b + header->loc_productcategories));
+    td->productcategories_width = *((uint32_t *) (b + header->loc_productcategories));
     td->productcategories = (char*) (b + header->loc_productcategories + sizeof(uint32_t));
-    td->route_id_width = *((uint32_t *) (b + header->loc_route_ids));
+    td->route_ids_width = *((uint32_t *) (b + header->loc_route_ids));
     td->route_ids = (char*) (b + header->loc_route_ids + sizeof(uint32_t));
-    td->stop_id_width = *((uint32_t *) (b + header->loc_stop_ids));
+    td->stop_ids_width = *((uint32_t *) (b + header->loc_stop_ids));
     td->stop_ids = (char*) (b + header->loc_stop_ids + sizeof(uint32_t));
-    td->trip_id_width = *((uint32_t *) (b + header->loc_trip_ids));
+    td->trip_ids_width = *((uint32_t *) (b + header->loc_trip_ids));
     td->trip_ids = (char*) (b + header->loc_trip_ids + sizeof(uint32_t));
     td->trip_active = (uint32_t*) (b + header->loc_trip_active);
     td->route_active = (uint32_t*) (b + header->loc_route_active);
     td->trip_attributes = (uint8_t*) (b + header->loc_trip_attributes);
     td->alerts = NULL;
-
-    // This should be migrated to n_agencies from the timetable generation in my humble option.
-    td->n_agencies = 0;
-    for (uint32_t r = 0; r < td->n_routes; ++r) {
-       if (td->routes[r].agency_index > td->n_agencies)
-          td->n_agencies = td->routes[r].agency_index;
-    }
 
     // This is probably a bit slow and is not strictly necessary, but does page in all the timetable entries.
     tdata_check_coherent(td);

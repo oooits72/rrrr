@@ -43,6 +43,20 @@ struct trip {
     int16_t  realtime_delay;    // This is signed to indicate early or late. All zeros upon creation (but serves as padding).
 };
 
+#if 0
+typedef struct trip_expanded trip_expanded_t;
+struct trip_expanded {
+    uint32_t *route_stops;
+    rtime_t *stop_times;
+    char *headsign;
+    uint16_t n_stops;
+    uint16_t attributes;
+    uint16_t agency_index;
+    uint16_t shortname_index;
+    uint16_t productcategory_index;
+};
+#endif
+
 typedef struct stoptime stoptime_t;
 struct stoptime {
     rtime_t arrival;
@@ -73,9 +87,31 @@ struct tdata {
     uint64_t calendar_start_time; // midnight of the first day in the 32-day calendar in seconds since the epoch, DST ignorant
     calendar_t dst_active;
     uint32_t n_stops;
+    uint32_t n_stop_attributes;
+    uint32_t n_stop_coords;
     uint32_t n_routes;
+    uint32_t n_route_stops;
+    uint32_t n_route_stop_attributes;
+    uint32_t n_stop_times;
     uint32_t n_trips;
-    uint32_t n_agencies;
+    uint32_t n_trip_attributes;
+    uint32_t n_stop_routes;
+    uint32_t n_transfer_target_stops;
+    uint32_t n_transfer_dist_meters;
+    uint32_t n_trip_active;
+    uint32_t n_route_active;
+    uint32_t n_platformcodes;
+    uint32_t n_stop_names;
+    uint32_t n_stop_nameidx;
+    uint32_t n_agency_ids;
+    uint32_t n_agency_names;
+    uint32_t n_agency_urls;
+    uint32_t n_headsigns;
+    uint32_t n_route_shortnames;
+    uint32_t n_productcategories;
+    uint32_t n_route_ids;
+    uint32_t n_stop_ids;
+    uint32_t n_trip_ids;
     stop_t *stops;
     uint8_t *stop_attributes;
     route_t *routes;
@@ -88,34 +124,36 @@ struct tdata {
     uint8_t  *transfer_dist_meters;
     // optional data -- NULL pointer means it is not available
     latlon_t *stop_coords;
-    uint32_t platformcode_width;
+    uint32_t platformcodes_width;
     char *platformcodes;
     char *stop_names;
     uint32_t *stop_nameidx;
-    uint32_t agency_id_width;
+    uint32_t agency_ids_width;
     char *agency_ids;
-    uint32_t agency_name_width;
+    uint32_t agency_names_width;
     char *agency_names;
-    uint32_t agency_url_width;
+    uint32_t agency_urls_width;
     char *agency_urls;
     char *headsigns;
-    uint32_t route_shortname_width;
+    uint32_t route_shortnames_width;
     char *route_shortnames;
-    uint32_t productcategory_width;
+    uint32_t productcategories_width;
     char *productcategories;
     calendar_t *trip_active;
     calendar_t *route_active;
     uint8_t *trip_attributes;
-    uint32_t route_id_width;
+    uint32_t route_ids_width;
     char *route_ids;
-    uint32_t stop_id_width;
+    uint32_t stop_ids_width;
     char *stop_ids;
-    uint32_t trip_id_width;
+    uint32_t trip_ids_width;
     char *trip_ids;
     TransitRealtime__FeedMessage *alerts;
 };
 
 void tdata_load(char* filename, tdata_t*);
+
+void tdata_load_dynamic(char* filename, tdata_t*);
 
 void tdata_close(tdata_t*);
 
@@ -206,5 +244,26 @@ void tdata_clear_gtfsrt_alerts (tdata_t *tdata);
 /* The signed delay of the specified trip in seconds. */
 float tdata_delay_min (tdata_t *td, uint32_t route_index, uint32_t trip_index);
 
-#endif // _TDATA_H
+#define load_dynamic(fd, storage, type) \
+    td->n_##storage = header->n_##storage; \
+    td->storage = (type*) malloc (td->n_##storage * sizeof(type)); \
+    lseek (fd, header->loc_##storage, SEEK_SET); \
+    read (fd, td->storage, td->n_##storage * sizeof(type))
 
+#define load_dynamic_string(fd, storage) \
+    td->n_##storage = header->n_##storage; \
+    lseek (fd, header->loc_##storage, SEEK_SET); \
+    read (fd, &td->storage##_width, sizeof(uint32_t)); \
+    td->storage = (char*) malloc (td->n_##storage * td->storage##_width * sizeof(char)); \
+    read (fd, td->storage, td->n_##storage * td->storage##_width * sizeof(char))
+
+#define load_mmap(storage, type) \
+    td->n_##storage = header->n_##storage; \
+    td->storage = (type *) (td->base + header->loc_##storage)
+
+#define load_mmap_string(storage) \
+    td->n_##storage = header->n_##storage; \
+    td->storage##_width = *((uint32_t *) (b + header->loc_##storage)); \
+    td->storage = (char*) (td->base + header->loc_##storage + sizeof(uint32_t))
+
+#endif // _TDATA_H
