@@ -22,7 +22,7 @@
 // file-visible struct
 typedef struct tdata_header tdata_header_t;
 struct tdata_header {
-    char version_string[8]; // should read "TTABLEV1"
+    char version_string[8]; // should read "TTABLEV3"
     uint64_t calendar_start_time;
     calendar_t dst_active;
 
