@@ -157,6 +157,8 @@ void tdata_load_dynamic(char* filename, tdata_t*);
 
 void tdata_close(tdata_t*);
 
+void tdata_close_dynamic(tdata_t*);
+
 void tdata_dump(tdata_t*);
 
 uint32_t *tdata_stops_for_route(tdata_t *, uint32_t route);

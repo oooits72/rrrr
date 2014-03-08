@@ -410,6 +410,36 @@ void tdata_load(char *filename, tdata_t *td) {
     D tdata_dump(td);
 }
 
+void tdata_close_dynamic(tdata_t *td) {
+    free (td->stops);
+    free (td->stop_attributes);
+    free (td->stop_coords);
+    free (td->routes);
+    free (td->route_stops);
+    free (td->route_stop_attributes);
+    free (td->stop_times);
+    free (td->trips);
+    free (td->trip_attributes);
+    free (td->stop_routes);
+    free (td->transfer_target_stops);
+    free (td->transfer_dist_meters);
+    free (td->trip_active);
+    free (td->route_active);
+    free (td->headsigns);
+    free (td->stop_names);
+    free (td->stop_nameidx);
+
+    free (td->platformcodes);
+    free (td->stop_ids);
+    free (td->trip_ids);
+    free (td->agency_ids);
+    free (td->agency_names);
+    free (td->agency_urls);
+    free (td->route_shortnames);
+    free (td->route_ids);
+    free (td->productcategories);
+}
+
 void tdata_close(tdata_t *td) {
     munmap(td->base, td->size);
 }
