@@ -169,8 +169,8 @@ def write_header () :
         ntrips, # n_trips
         ntrips, # n_trip_attributes
         nstop_routes, # n_stop_routes
-        len(transfers_offsets), #n_transfer_target_stop
-        len(transfers_offsets), #n_transfer_dist_meters
+        ntargetstops, #n_transfer_target_stop
+        ndistmeters, #n_transfer_dist_meters
         ntrips, #n_trip_active
         len(route_mask_for_idx), # n_route_active
         len(platformcode_for_idx), # n_platformcodes
@@ -536,34 +536,34 @@ del stop_routes
 print "saving transfer stops (footpaths)"
 write_text_comment("TRANSFER TARGET STOPS")
 loc_transfer_target_stops = tell()
-offset = 0
+ntargetstops = 0
 transfers_offsets = []
 for from_idx, from_sid in enumerate(stop_id_for_idx) :
-    transfers_offsets.append(offset)
+    transfers_offsets.append(ntargetstops)
     for from_sid, to_sid, ttype, ttime in db.gettransfers(from_sid,maxdistance=MAX_DISTANCE):
         if ttime == None :
             continue # skip non-time/non-distance transfers for now
         to_idx = idx_for_stop_id[to_sid]
         writeint(to_idx)
-        offset += 1
-transfers_offsets.append(offset) # sentinel
+        ntargetstops += 1
+transfers_offsets.append(ntargetstops) # sentinel
 assert len(transfers_offsets) == nstops + 1
 
 print "saving transfer distances (footpaths)"
 write_text_comment("TRANSFER DISTANCES")
 loc_transfer_dist_meters = tell()
-offset = 0
+ndistmeters = 0
 transfers_offsets = []
 for from_idx, from_sid in enumerate(stop_id_for_idx) :
-    transfers_offsets.append(offset)
+    transfers_offsets.append(ndistmeters)
     for from_sid, to_sid, ttype, ttime in db.gettransfers(from_sid,maxdistance=MAX_DISTANCE):
         if ttime == None :
             continue # skip non-time/non-distance transfers for now
         to_idx = idx_for_stop_id[to_sid]
         # Store distances in units of 16 meters (rounding by adding 8)
         writebyte((int(ttime) + 8) >> 4)
-        offset += 1
-transfers_offsets.append(offset) # sentinel
+        ndistmeters += 1
+transfers_offsets.append(ndistmeters) # sentinel
 assert len(transfers_offsets) == nstops + 1
 
 print "saving stop indexes"
