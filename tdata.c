@@ -349,6 +349,10 @@ void tdata_load_dynamic(char *filename, tdata_t *td) {
     load_dynamic_string (fd, route_ids);
     load_dynamic_string (fd, productcategories);
 
+    #ifdef RRRR_REALTIME_EXPANDED
+    td->trip_stoptimes = (stoptime_t **) calloc(td->n_trips, sizeof(stoptime_t *));
+    #endif
+
     td->alerts = NULL;
 }
 
@@ -403,12 +407,25 @@ void tdata_load(char *filename, tdata_t *td) {
     load_mmap_string (b, route_ids);
     load_mmap_string (b, productcategories);
 
+    #ifdef RRRR_REALTIME_EXPANDED
+    td->trip_stoptimes = (stoptime_t **) calloc(td->n_trips, sizeof(stoptime_t *));
+    #endif
+
     td->alerts = NULL;
 
     // This is probably a bit slow and is not strictly necessary, but does page in all the timetable entries.
     tdata_check_coherent(td);
     D tdata_dump(td);
 }
+
+#ifdef RRRR_REALTIME_EXPANDED
+void tdata_free_expanded(tdata_t *td) {
+    for (uint32_t t = 0; t < td->n_trips; ++t)
+        free (td->trip_stoptimes[t]);
+
+    free (td->trip_stoptimes);
+}
+#endif
 
 void tdata_close_dynamic(tdata_t *td) {
     free (td->stops);
@@ -438,10 +455,18 @@ void tdata_close_dynamic(tdata_t *td) {
     free (td->route_shortnames);
     free (td->route_ids);
     free (td->productcategories);
+
+    #ifdef RRRR_REALTIME_EXPANDED
+    tdata_free_expanded(td);
+    #endif
 }
 
 void tdata_close(tdata_t *td) {
     munmap(td->base, td->size);
+
+    #ifdef RRRR_REALTIME_EXPANDED
+    tdata_free_expanded(td);
+    #endif
 }
 
 // TODO should pass pointer to tdata?
