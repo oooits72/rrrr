@@ -257,13 +257,13 @@ float tdata_delay_min (tdata_t *td, uint32_t route_index, uint32_t trip_index);
     td->storage = (char*) malloc (td->n_##storage * td->storage##_width * sizeof(char)); \
     read (fd, td->storage, td->n_##storage * td->storage##_width * sizeof(char))
 
-#define load_mmap(storage, type) \
+#define load_mmap(b, storage, type) \
     td->n_##storage = header->n_##storage; \
-    td->storage = (type *) (td->base + header->loc_##storage)
+    td->storage = (type *) (b + header->loc_##storage)
 
-#define load_mmap_string(storage) \
+#define load_mmap_string(b, storage) \
     td->n_##storage = header->n_##storage; \
     td->storage##_width = *((uint32_t *) (b + header->loc_##storage)); \
-    td->storage = (char*) (td->base + header->loc_##storage + sizeof(uint32_t))
+    td->storage = (char*) (b + header->loc_##storage + sizeof(uint32_t))
 
 #endif // _TDATA_H

@@ -41,12 +41,12 @@ struct tdata_header {
     uint32_t n_trip_active;
     uint32_t n_route_active;
     uint32_t n_platformcodes;
-    uint32_t n_stop_names;
+    uint32_t n_stop_names; /* length of the object in bytes */
     uint32_t n_stop_nameidx;
     uint32_t n_agency_ids;
     uint32_t n_agency_names;
     uint32_t n_agency_urls;
-    uint32_t n_headsigns;
+    uint32_t n_headsigns; /* length of the object in bytes */
     uint32_t n_route_shortnames;
     uint32_t n_productcategories;
     uint32_t n_route_ids;
@@ -310,7 +310,7 @@ void tdata_load_dynamic(char *filename, tdata_t *td) {
     if (fd == -1)
         die("could not find input file");
 
-    read (fd, &header, sizeof(header));
+    read (fd, header, sizeof(*header));
 
     td->base = NULL;
     td->size = 0;
@@ -349,6 +349,7 @@ void tdata_load_dynamic(char *filename, tdata_t *td) {
     load_dynamic_string (fd, route_ids);
     load_dynamic_string (fd, productcategories);
 
+    td->alerts = NULL;
 }
 
 /* Map an input file into memory and reconstruct pointers to its contents. */
@@ -369,50 +370,39 @@ void tdata_load(char *filename, tdata_t *td) {
 
     void *b = td->base;
     tdata_header_t *header = b;
-    if( strncmp("TTABLEV2", header->version_string, 8) )
+    if( strncmp("TTABLEV3", header->version_string, 8) )
         die("the input file does not appear to be a timetable or is of the wrong version");
     td->calendar_start_time = header->calendar_start_time;
     td->dst_active = header->dst_active;
-    td->n_stops = header->n_stops;
-    td->n_routes = header->n_routes;
-    td->n_trips = header->n_trips;
-    /* td->n_agencies = header->n_agencies; */
-    td->stops = (stop_t*) (b + header->loc_stops);
-    td->stop_attributes = (uint8_t*) (b + header->loc_stop_attributes);
-    td->stop_coords = (latlon_t*) (b + header->loc_stop_coords);
-    td->routes = (route_t*) (b + header->loc_routes);
-    td->route_stops = (uint32_t *) (b + header->loc_route_stops);
-    td->route_stop_attributes = (uint8_t *) (b + header->loc_route_stop_attributes);
-    td->stop_times = (stoptime_t*) (b + header->loc_stop_times);
-    td->trips = (trip_t*) (b + header->loc_trips);
-    td->stop_routes = (uint32_t *) (b + header->loc_stop_routes);
-    td->transfer_target_stops = (uint32_t *) (b + header->loc_transfer_target_stops);
-    td->transfer_dist_meters = (uint8_t *) (b + header->loc_transfer_dist_meters);
-    //maybe replace with pointers because there's a lot of wasted space?
-    td->platformcodes_width = *((uint32_t *) (b + header->loc_platformcodes));
-    td->platformcodes = (char*) (b + header->loc_platformcodes + sizeof(uint32_t));
-    td->stop_names = (char*) (b + header->loc_stop_names);
-    td->stop_nameidx = (uint32_t *) (b + header->loc_stop_nameidx);
-    td->agency_ids_width = *((uint32_t *) (b + header->loc_agency_ids));
-    td->agency_ids = (char*) (b + header->loc_agency_ids + sizeof(uint32_t));
-    td->agency_names_width = *((uint32_t *) (b + header->loc_agency_names));
-    td->agency_names = (char*) (b + header->loc_agency_names + sizeof(uint32_t));
-    td->agency_urls_width = *((uint32_t *) (b + header->loc_agency_urls));
-    td->agency_urls = (char*) (b + header->loc_agency_urls + sizeof(uint32_t));
-    td->headsigns = (char*) (b + header->loc_headsigns);
-    td->route_shortnames_width = *((uint32_t *) (b + header->loc_route_shortnames));
-    td->route_shortnames = (char*) (b + header->loc_route_shortnames + sizeof(uint32_t));
-    td->productcategories_width = *((uint32_t *) (b + header->loc_productcategories));
-    td->productcategories = (char*) (b + header->loc_productcategories + sizeof(uint32_t));
-    td->route_ids_width = *((uint32_t *) (b + header->loc_route_ids));
-    td->route_ids = (char*) (b + header->loc_route_ids + sizeof(uint32_t));
-    td->stop_ids_width = *((uint32_t *) (b + header->loc_stop_ids));
-    td->stop_ids = (char*) (b + header->loc_stop_ids + sizeof(uint32_t));
-    td->trip_ids_width = *((uint32_t *) (b + header->loc_trip_ids));
-    td->trip_ids = (char*) (b + header->loc_trip_ids + sizeof(uint32_t));
-    td->trip_active = (uint32_t*) (b + header->loc_trip_active);
-    td->route_active = (uint32_t*) (b + header->loc_route_active);
-    td->trip_attributes = (uint8_t*) (b + header->loc_trip_attributes);
+
+    load_mmap (b, stops, stop_t);
+    load_mmap (b, stop_attributes, uint8_t);
+    load_mmap (b, stop_coords, latlon_t);
+    load_mmap (b, routes, route_t);
+    load_mmap (b, route_stops, uint32_t);
+    load_mmap (b, route_stop_attributes, uint8_t);
+    load_mmap (b, stop_times, stoptime_t);
+    load_mmap (b, trips, trip_t);
+    load_mmap (b, trip_attributes, uint8_t);
+    load_mmap (b, stop_routes, uint32_t);
+    load_mmap (b, transfer_target_stops, uint32_t);
+    load_mmap (b, transfer_dist_meters, uint8_t);
+    load_mmap (b, trip_active, calendar_t);
+    load_mmap (b, route_active, calendar_t);
+    load_mmap (b, headsigns, char);
+    load_mmap (b, stop_names, char);
+    load_mmap (b, stop_nameidx, uint32_t);
+
+    load_mmap_string (b, platformcodes);
+    load_mmap_string (b, stop_ids);
+    load_mmap_string (b, trip_ids);
+    load_mmap_string (b, agency_ids);
+    load_mmap_string (b, agency_names);
+    load_mmap_string (b, agency_urls);
+    load_mmap_string (b, route_shortnames);
+    load_mmap_string (b, route_ids);
+    load_mmap_string (b, productcategories);
+
     td->alerts = NULL;
 
     // This is probably a bit slow and is not strictly necessary, but does page in all the timetable entries.

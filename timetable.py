@@ -150,7 +150,7 @@ def write_string_table(strings) :
 # make this into a method on a Header class
 # On 64-bit architectures using gcc long int is at least an int64_t.
 # We were using L in platform dependent mode, which just happened to work. TODO switch to platform independent mode?
-struct_header = Struct('8sQ30I')
+struct_header = Struct('8sQ53I')
 def write_header () :
     """ Write out a file header containing offsets to the beginning of each subsection.
     Must match struct transit_data_header in transitdata.c """
@@ -159,32 +159,32 @@ def write_header () :
     packed = struct_header.pack(htext,
         calendar_start_time,
         dst_mask,
-        nstops,
-        nstops,
-        nstops,
-        nroutes,
-        nroute_stops,
-        nroute_stops,
-        nstoptimes,
-        ntrips,
-        ntrips,
-        nstop_routes,
-        nstops,
-        nstops,
-        ntrips,
-        nroutes,
-        len(platformcode_for_idx),
-        len(namesize),
-        len(nameloc_for_idx) + 1,
-        len(agencyIds),
-        len(agencyNames),
-        len(agencyUrls),
-        headsigncount,
-        len(idx_for_shortname),
-        len(idx_for_productcategory),
-        len(route_ids_for_idx),
-        len(stop_id_for_idx),
-        len(all_trip_ids),
+        nstops, # n_stops
+        nstops, # n_stop_attributes
+        nstops, # n_stop_coords
+        nroutes, # n_routes
+        nroute_stops, # n_route_stops
+        nroute_stops, # n_route_stop_attributes
+        nstoptimes, # n_stop_times
+        ntrips, # n_trips
+        ntrips, # n_trip_attributes
+        nstop_routes, # n_stop_routes
+        len(transfers_offsets), #n_transfer_target_stop
+        len(transfers_offsets), #n_transfer_dist_meters
+        ntrips, #n_trip_active
+        len(route_mask_for_idx), # n_route_active
+        len(platformcode_for_idx), # n_platformcodes
+        namesize, # n_stop_names (length of the object)
+        len(nameloc_for_idx) + 1, # n_stop_nameidx
+        len(agencyIds), # n_agency_ids
+        len(agencyNames), # n_agency_names
+        len(agencyUrls), # n_agency_urls
+        headsigncount, # n_headsigns (length of the object)
+        len(idx_for_shortname), # n_route_shortnames
+        len(idx_for_productcategory), # n_productcategories
+        len(route_ids_for_idx), # n_route_ids
+        len(stop_id_for_idx), # n_stop_ids
+        len(all_trip_ids), # n_trip_ids
 
         loc_stops,
         loc_stop_attributes,
