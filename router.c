@@ -286,8 +286,9 @@ tdata_arrive (tdata_t* td, trip_t *trip, uint32_t route_stop) {
 
 /* Get the departure or arrival time of the given trip on the given service day, applying realtime data as needed. */
 static inline rtime_t
-tdata_stoptime (tdata_t* tdata, trip_t *trip, uint32_t route_stop, bool arrive, serviceday_t *serviceday) {
+tdata_stoptime (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, uint32_t route_stop, bool arrive, serviceday_t *serviceday) {
     rtime_t time, time_adjusted;
+    trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
     if (arrive) time = tdata_arrive(tdata, trip, route_stop);
     else           time = tdata_depart(tdata, trip, route_stop);
     time_adjusted = time + serviceday->midnight;
@@ -390,14 +391,13 @@ bool router_route(router_t *router, router_request_t *req) {
           interfere with search reversal, but reversal is meaningless/useless in on-board depart trips anyway.
         */
         route_t  route = router->tdata->routes[req->start_trip_route];
-        trip_t   *trip = tdata_trips_for_route (router->tdata, req->start_trip_route) + req->start_trip_trip;
         uint32_t *route_stops   = tdata_stops_for_route(router->tdata, req->start_trip_route);
         uint32_t prev_stop      = NONE;
         rtime_t  prev_stop_time = UNREACHED;
         // add tdata function to return next stop and stoptime given route, trip, and time
         for (int route_stop = 0; route_stop < route.n_stops; ++route_stop) {
             uint32_t stop = route_stops[route_stop];
-            rtime_t time = tdata_stoptime (router->tdata, trip, route_stop, false, &(router->servicedays[1]));
+            rtime_t time = tdata_stoptime (router->tdata, req->start_trip_route, req->start_trip_trip, route_stop, false, &(router->servicedays[1]));
             /* Find stop immediately after the given time on the given trip. */
             if (req->arrive_by ? time > req->time : time < req->time) {
                 if (prev_stop_time == UNREACHED || (req->arrive_by ? time < prev_stop_time : time > prev_stop_time)) {
@@ -532,7 +532,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                 } else {
                     // removed xfer slack for simplicity
                     // is this repetitively triggering re-boarding searches along a single route?
-                    rtime_t trip_time = tdata_stoptime (router->tdata, &(route_trips[trip]), route_stop, req->arrive_by, board_serviceday);
+                    rtime_t trip_time = tdata_stoptime (router->tdata, route_idx, trip, route_stop, req->arrive_by, board_serviceday);
                     if (trip_time == UNREACHED) attempt_board = false;
                     else if (req->arrive_by ? prev_time > trip_time
                                             : prev_time < trip_time) {
@@ -583,7 +583,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         if ( route_trips[this_trip].realtime_delay == CANCELED) continue;
 
                         /* consider the arrival or departure time on the current service day */
-                        rtime_t time = tdata_stoptime (router->tdata, &(route_trips[this_trip]), route_stop, req->arrive_by, serviceday);
+                        rtime_t time = tdata_stoptime (router->tdata, route_idx, this_trip, route_stop, req->arrive_by, serviceday);
                         // T printf("    board option %d at %s \n", this_trip, ...
                         if (time == UNREACHED) continue; // rtime overflow due to long overnight trips on day 2
                         /* Mark trip for boarding if it improves on the last round's post-walk time at this stop.
@@ -613,7 +613,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                 }
                 continue; // to the next stop in the route
             } else if (trip != NONE) { // We have already boarded a trip along this route.
-                rtime_t time = tdata_stoptime (router->tdata, &(route_trips[trip]), route_stop, !req->arrive_by, board_serviceday);
+                rtime_t time = tdata_stoptime (router->tdata, route_idx, trip, route_stop, !req->arrive_by, board_serviceday);
                 if (time == UNREACHED) continue; // overflow due to long overnight trips on day 2
                 T printf("    on board trip %d considering time %s \n", trip, timetext(time));
                 // Target pruning, sec. 3.1 of RAPTOR paper.
