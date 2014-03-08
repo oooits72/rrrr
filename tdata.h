@@ -4,6 +4,7 @@
 #ifndef _TDATA_H
 #define _TDATA_H
 
+#include "config.h"
 #include "geometry.h"
 #include "util.h"
 #include "radixtree.h"
@@ -148,6 +149,11 @@ struct tdata {
     char *stop_ids;
     uint32_t trip_ids_width;
     char *trip_ids;
+
+    #ifdef RRRR_REALTIME_EXPANDED
+    stoptime_t **trip_stoptimes;
+    #endif
+
     TransitRealtime__FeedMessage *alerts;
 };
 
@@ -248,7 +254,7 @@ float tdata_delay_min (tdata_t *td, uint32_t route_index, uint32_t trip_index);
 
 #define load_dynamic(fd, storage, type) \
     td->n_##storage = header->n_##storage; \
-    td->storage = (type*) malloc (td->n_##storage * sizeof(type)); \
+    td->storage = (type*) malloc (RRRR_DYNAMIC_SLACK * td->n_##storage * sizeof(type)); \
     lseek (fd, header->loc_##storage, SEEK_SET); \
     read (fd, td->storage, td->n_##storage * sizeof(type))
 
@@ -256,7 +262,7 @@ float tdata_delay_min (tdata_t *td, uint32_t route_index, uint32_t trip_index);
     td->n_##storage = header->n_##storage; \
     lseek (fd, header->loc_##storage, SEEK_SET); \
     read (fd, &td->storage##_width, sizeof(uint32_t)); \
-    td->storage = (char*) malloc (td->n_##storage * td->storage##_width * sizeof(char)); \
+    td->storage = (char*) malloc (RRRR_DYNAMIC_SLACK * td->n_##storage * td->storage##_width * sizeof(char)); \
     read (fd, td->storage, td->n_##storage * td->storage##_width * sizeof(char))
 
 #define load_mmap(b, storage, type) \
