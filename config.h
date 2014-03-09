@@ -57,4 +57,6 @@
 #define RRRR_DYNAMIC_SLACK 1
 #define RRRR_REALTIME_EXPANDED 1
 #define RRRR_REALTIME_DELAY 1
+#else
+#define RRRR_DYNAMIC_SLACK 1
 #endif
