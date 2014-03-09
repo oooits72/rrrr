@@ -351,6 +351,64 @@ tdata_stoptime (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, uint32
     return time_adjusted;
 }
 
+static inline void
+tdata_stoptimes_for_trip (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, bool arrive, serviceday_t *serviceday, rtime_t *result) {
+    /* This code is only required if want realtime support in the journey planner */
+    #ifdef RRRR_REALTIME
+
+    /* given that we are at a serviceday the realtime scope applies to */
+    if (serviceday->apply_realtime) {
+
+        /* This code applies when the realtime data source is time-expanded */
+        #ifdef RRRR_REALTIME_EXPANDED
+
+        /* the expanded stoptimes can be found at the same row as the trip */
+        stoptime_t *trip_times = tdata->trip_stoptimes[tdata->routes[route_idx].trip_ids_offset + trip_offset];
+
+        if (trip_times) {
+            for (int route_stop = 0; route_stop < tdata->routes[route_idx].n_stops; ++route_stop) {
+                rtime_t time = (arrive ? trip_times[route_stop].arrival : trip_times[route_stop].departure);
+                rtime_t time_adjusted = time + serviceday->midnight;
+                if (time_adjusted < time) result[route_stop] = UNREACHED; else result[route_stop] = time_adjusted;
+            }
+        } else
+        #endif /* RRRR_REALTIME_EXPANDED */
+
+        /* if the expanded stoptimes have not been added, or our source is not time-expanded */
+        {
+            trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
+            stoptime_t *trip_times = &tdata->stop_times[trip->stop_times_offset];
+
+            /* if punctuality is provided, we will apply it naively to all stops */
+            #ifdef RRRR_REALTIME_DELAY
+                /* TODO: give we do the calculation here, we could do an alternative propagation */
+                for (int route_stop = 0; route_stop < tdata->routes[route_idx].n_stops; ++route_stop) {
+                    rtime_t time = (arrive ? trip_times[route_stop].arrival : trip_times[route_stop].departure) + trip->begin_time + trip->realtime_delay;
+                    rtime_t time_adjusted = time + serviceday->midnight;
+                    if (time_adjusted < time) result[route_stop] = UNREACHED; else result[route_stop] = time_adjusted;
+                }
+            #else
+                for (int route_stop = 0; route_stop < tdata->routes[route_idx].n_stops; ++route_stop) {
+                    rtime_t time = (arrive ? trip_times[route_stop].arrival : trip_times[route_stop].departure) + trip->begin_time;
+                    rtime_t time_adjusted = time + serviceday->midnight;
+                    if (time_adjusted < time) result[route_stop] = UNREACHED; else result[route_stop] = time_adjusted;
+                }
+            #endif /* RRRR_REALTIME_DELAY */
+        }
+    } else
+    #endif /* RRRR_REALTIME */
+    {
+        trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
+        stoptime_t *trip_times = &tdata->stop_times[trip->stop_times_offset];
+
+        for (int route_stop = 0; route_stop < tdata->routes[route_idx].n_stops; ++route_stop) {
+            rtime_t time = (arrive ? trip_times[route_stop].arrival : trip_times[route_stop].departure) + trip->begin_time;
+            rtime_t time_adjusted = time + serviceday->midnight;
+            if (time_adjusted < time) result[route_stop] = UNREACHED; else result[route_stop] = time_adjusted;
+        }
+    }
+}
+
 bool router_route(router_t *router, router_request_t *req) {
     // router_request_dump(router, preq);
     uint32_t n_stops = router->tdata->n_stops;
@@ -439,10 +497,15 @@ bool router_route(router_t *router, router_request_t *req) {
         uint32_t *route_stops   = tdata_stops_for_route(router->tdata, req->start_trip_route);
         uint32_t prev_stop      = NONE;
         rtime_t  prev_stop_time = UNREACHED;
+        rtime_t  trip_times[route.n_stops];
+
+        /* BUG: previous code always took false, issue #114 */
+        tdata_stoptimes_for_trip (router->tdata, req->start_trip_route, req->start_trip_trip, false, &(router->servicedays[1]), trip_times);
+
         // add tdata function to return next stop and stoptime given route, trip, and time
         for (int route_stop = 0; route_stop < route.n_stops; ++route_stop) {
             uint32_t stop = route_stops[route_stop];
-            rtime_t time = tdata_stoptime (router->tdata, req->start_trip_route, req->start_trip_trip, route_stop, false, &(router->servicedays[1]));
+            rtime_t time = trip_times[route_stop];
             /* Find stop immediately after the given time on the given trip. */
             if (req->arrive_by ? time > req->time : time < req->time) {
                 if (prev_stop_time == UNREACHED || (req->arrive_by ? time < prev_stop_time : time > prev_stop_time)) {
@@ -539,6 +602,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
         uint32_t      board_stop = 0;          // stop index where that trip was boarded
         rtime_t       board_time = 0;          // time when that trip was boarded
         serviceday_t *board_serviceday = NULL; // Service day on which that trip was boarded
+        rtime_t       trip_times[route.n_stops];
         /*
             Iterate over stop indexes within the route. Each one corresponds to a global stop index.
             Note that the stop times array should be accessed with [trip][route_stop] not [trip][stop].
@@ -652,13 +716,15 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         board_stop = stop;
                         board_serviceday = best_serviceday;
                         trip = best_trip;
+                        tdata_stoptimes_for_trip (router->tdata, route_idx, trip, !req->arrive_by, board_serviceday, trip_times);
                     }
                 } else {
                     T printf("    no suitable trip to board.\n");
                 }
                 continue; // to the next stop in the route
             } else if (trip != NONE) { // We have already boarded a trip along this route.
-                rtime_t time = tdata_stoptime (router->tdata, route_idx, trip, route_stop, !req->arrive_by, board_serviceday);
+                rtime_t time = trip_times[route_stop];
+
                 if (time == UNREACHED) continue; // overflow due to long overnight trips on day 2
                 T printf("    on board trip %d considering time %s \n", trip, timetext(time));
                 // Target pruning, sec. 3.1 of RAPTOR paper.
@@ -668,6 +734,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                     T printf("    (target pruning)\n");
                     // We cannot break out of this route entirely, because re-boarding may occur at a later stop.
                     continue;
+                    /* This continue should be commented out for visualisation */
                 }
                 if ((req->time_cutoff != UNREACHED) &&
                     (req->arrive_by ? time < req->time_cutoff
