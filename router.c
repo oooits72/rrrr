@@ -322,7 +322,7 @@ tdata_stoptime (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, uint32
             time = trip->begin_time;
             #endif /* RRRR_REALTIME_DELAY */
         }
-    }
+    } else
     #endif /* RRRR_REALTIME */
     {
         trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
