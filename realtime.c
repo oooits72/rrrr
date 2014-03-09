@@ -14,6 +14,9 @@
 */
 
 #include <stdio.h>
+
+#ifdef RRRR_REALTIME
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -238,3 +241,12 @@ usage:
     return 1;
 
 }
+
+#else
+
+int main() {
+    printf("The code was not compiled with RRRR_REALTIME.\n");
+    return -1;
+}
+
+#endif

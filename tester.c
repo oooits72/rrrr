@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 
     // load transit data from disk
     tdata_t tdata;
-    tdata_load(tdata_file, &tdata);
+    tdata_load_dynamic(tdata_file, &tdata);
     optind = 0;
     opt = 0;
     while (opt >= 0) {
@@ -108,6 +108,7 @@ int main(int argc, char **argv) {
     }
     req.time_rounded = false;
 
+    #ifdef RRRR_REALTIME
     // load gtfs-rt file from disk
     if (gtfsrt_file != NULL || gtfsrt_alerts_file != NULL) {
         RadixTree *tripid_index  = rxt_load_strings_from_tdata (tdata.trip_ids, tdata.trip_ids_width, tdata.n_trips);
@@ -123,6 +124,7 @@ int main(int argc, char **argv) {
             tdata_apply_gtfsrt_alerts_file (&tdata, routeid_index, stopid_index, tripid_index, gtfsrt_alerts_file);
         }
     }
+    #endif
 
     // initialize router
     router_t router;

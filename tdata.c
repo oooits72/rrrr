@@ -573,6 +573,8 @@ void tdata_dump(tdata_t *td) {
 #endif
 }
 
+#ifdef RRRR_REALTIME
+
 /*
   Decodes the GTFS-RT message of lenth len in buffer buf, extracting vehicle position messages
   and using the delay extension (1003) to update RRRR's per-trip delay information.
@@ -712,6 +714,8 @@ void tdata_apply_gtfsrt_alerts_file (tdata_t *tdata, RadixTree *routeid_index, R
     tdata_apply_gtfsrt_alerts (tdata, routeid_index, stopid_index, tripid_index, buf, st.st_size);
     munmap (buf, st.st_size);
 }
+
+#endif
 
 // tdata_get_route_stops
 
