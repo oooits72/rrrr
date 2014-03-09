@@ -152,6 +152,7 @@ struct tdata {
 
     #ifdef RRRR_REALTIME_EXPANDED
     stoptime_t **trip_stoptimes;
+    uint32_t *trip_routes;
     #endif
 
     TransitRealtime__FeedMessage *alerts;
