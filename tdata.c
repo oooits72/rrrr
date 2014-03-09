@@ -610,7 +610,7 @@ void tdata_apply_gtfsrt_delay (TransitRealtime__TripUpdate__StopTimeUpdate *upda
   Decodes the GTFS-RT message of lenth len in buffer buf, extracting vehicle position messages
   and using the delay extension (1003) to update RRRR's per-trip delay information.
 */
-void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *tripid_index, uint8_t *buf, size_t len) {
+void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *stopid_index, RadixTree *tripid_index, uint8_t *buf, size_t len) {
     TransitRealtime__FeedMessage *msg;
     msg = transit_realtime__feed_message__unpack (NULL, len, buf);
     if (msg == NULL) {
@@ -697,7 +697,7 @@ void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *tripid_index, uint8_t *buf, 
                                 TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
 
                                 char *stop_id = rt_stop_time_update->stop_id;
-                                uint32_t stop_index = rxt_find (tripid_index, stop_id);
+                                uint32_t stop_index = rxt_find (stopid_index, stop_id);
                                 uint32_t *route_stops = tdata->route_stops + route->route_stops_offset;
 
                                 if (route_stops[rs] == stop_index) {
@@ -721,6 +721,7 @@ void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *tripid_index, uint8_t *buf, 
                                             }
                                             tdata_apply_gtfsrt_delay (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
                                         } else {
+                                            /* we couldn't find the stop at all */
                                             rs = propagate;
                                         }
                                     }
@@ -793,14 +794,14 @@ void tdata_clear_gtfsrt (tdata_t *tdata) {
     }
 }
 
-void tdata_apply_gtfsrt_file (tdata_t *tdata, RadixTree *tripid_index, char *filename) {
+void tdata_apply_gtfsrt_file (tdata_t *tdata, RadixTree *stopid_index, RadixTree *tripid_index, char *filename) {
     int fd = open(filename, O_RDONLY);
     if (fd == -1) die("Could not find GTFS_RT input file.\n");
     struct stat st;
     if (stat(filename, &st) == -1) die("Could not stat GTFS_RT input file.\n");
     uint8_t *buf = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
     if (buf == MAP_FAILED) die("Could not map GTFS-RT input file.\n");
-    tdata_apply_gtfsrt (tdata, tripid_index, buf, st.st_size);
+    tdata_apply_gtfsrt (tdata, stopid_index, tripid_index, buf, st.st_size);
     munmap (buf, st.st_size);
 }
 

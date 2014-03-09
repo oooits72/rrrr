@@ -238,9 +238,9 @@ stoptime_t *tdata_timedemand_type(tdata_t*, uint32_t route_index, uint32_t trip_
 /* Get a pointer to the array of trip structs for this route. */
 trip_t *tdata_trips_for_route(tdata_t *td, uint32_t route_index);
 
-void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *tripid_index, uint8_t *buf, size_t len);
+void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *stopid_index, RadixTree *tripid_index, uint8_t *buf, size_t len);
 
-void tdata_apply_gtfsrt_file (tdata_t *tdata, RadixTree *tripid_index, char *filename);
+void tdata_apply_gtfsrt_file (tdata_t *tdata, RadixTree *stopid_index, RadixTree *tripid_index, char *filename);
 
 void tdata_clear_gtfsrt (tdata_t *tdata);
 
