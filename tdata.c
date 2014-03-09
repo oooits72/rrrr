@@ -594,28 +594,27 @@ void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *tripid_index, uint8_t *buf, 
         TransitRealtime__TripDescriptor *trip = vehicle->trip;
         if (trip == NULL) goto cleanup;
         char *trip_id = trip->trip_id;
-
-        int32_t delay_sec = 0;
-        if (trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__CANCELED) {
-            delay_sec = CANCELED;
-        } else {
-            TransitRealtime__OVapiVehiclePosition *ovapi_vehicle_position = vehicle->ovapi_vehicle_position;
-            if (ovapi_vehicle_position == NULL) printf ("    entity contains no delay message.\n");
-            else delay_sec = ovapi_vehicle_position->delay;
-            if (abs(delay_sec) > 60 * 120) {
-                printf ("    filtering out extreme delay of %d sec.\n", delay_sec);
-                delay_sec = 0;
-            }
-        }
-
-        /* Apply delay. */
         uint32_t trip_index = rxt_find (tripid_index, trip_id);
-        if (trip_index == RADIX_TREE_NONE) {
-            printf ("    trip id was not found in the radix tree.\n");
-        } else {
+        if (trip_index != RADIX_TREE_NONE) {
+            int32_t delay_sec = 0;
+            if (trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__CANCELED) {
+                delay_sec = CANCELED;
+            } else {
+                TransitRealtime__OVapiVehiclePosition *ovapi_vehicle_position = vehicle->ovapi_vehicle_position;
+                if (ovapi_vehicle_position == NULL) printf ("    entity contains no delay message.\n");
+                else delay_sec = ovapi_vehicle_position->delay;
+                if (abs(delay_sec) > 60 * 120) {
+                    printf ("    filtering out extreme delay of %d sec.\n", delay_sec);
+                    delay_sec = 0;
+                }
+            }
+
+            /* Apply delay. */
             // printf ("    trip_id %s, trip number %d, applying delay of %d sec.\n", trip_id, trip_index, delay_sec);
             trip_t *trip = tdata->trips + trip_index;
             trip->realtime_delay = SEC_TO_RTIME(delay_sec);
+        } else {
+            printf ("    trip id was not found in the radix tree.\n");
         }
     }
     cleanup:
