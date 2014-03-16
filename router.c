@@ -293,37 +293,25 @@ tdata_stoptime (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, uint32
     stoptime_t *trip_times;
 
     /* This code is only required if want realtime support in the journey planner */
-    #ifdef RRRR_REALTIME
+    #ifdef RRRR_REALTIME_EXPANDED
 
     /* given that we are at a serviceday the realtime scope applies to */
     if (serviceday->apply_realtime) {
 
-        /* This code applies when the realtime data source is time-expanded */
-        #ifdef RRRR_REALTIME_EXPANDED
-
         /* the expanded stoptimes can be found at the same row as the trip */
         trip_times = tdata->trip_stoptimes[tdata->routes[route_idx].trip_ids_offset + trip_offset];
 
-        /* if the expanded stoptimes have been added, the begin_time is precalculated */
         if (trip_times) {
+            /* if the expanded stoptimes have been added, the begin_time is precalculated */
             time = 0;
-        } else
-        #endif /* RRRR_REALTIME_EXPANDED */
-
-        /* if the expanded stoptimes have not been added, or our source is not time-expanded */
-        {
+        } else {
+            /* if the expanded stoptimes have not been added, or our source is not time-expanded */
             trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
             trip_times = &tdata->stop_times[trip->stop_times_offset];
-
-            /* if punctuality is provided, we will apply it naively to all stops */
-            #ifdef RRRR_REALTIME_DELAY
-            time = trip->begin_time + trip->realtime_delay;
-            #else
             time = trip->begin_time;
-            #endif /* RRRR_REALTIME_DELAY */
         }
     } else
-    #endif /* RRRR_REALTIME */
+    #endif /* RRRR_REALTIME_EXPANDED */
     {
         trip_t *trip = tdata_trips_for_route (tdata, route_idx) + trip_offset;
         trip_times = &tdata->stop_times[trip->stop_times_offset];
@@ -342,7 +330,6 @@ tdata_stoptime (tdata_t* tdata, uint32_t route_idx, uint32_t trip_offset, uint32
     printf ("boarding at stop %d, time is: %s \n", route_stop, timetext (time));
     printf ("   after adjusting: %s \n", timetext (time_adjusted));
     printf ("   midnight: %d \n", serviceday->midnight);
-    printf ("   delay (4sec): %d \n", trip->realtime_delay);
     */
 
     /* Detect overflow (this will still not catch wrapping due to negative delays on small positive times) */
@@ -361,6 +348,8 @@ bool router_route(router_t *router, router_request_t *req) {
     {
         // One bit for the calendar day on which realtime data should be applied (applying only on the true current calendar day)
         calendar_t realtime_mask = 1 << ((time(NULL) - router->tdata->calendar_start_time) / SEC_IN_ONE_DAY);
+        // Fake realtime_mask if we are QA testing.
+        // realtime_mask = 1;
         serviceday_t yesterday;
         yesterday.midnight = 0;
         yesterday.mask = router->day_mask >> 1;
@@ -624,8 +613,6 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         if ( ! (serviceday->mask & trip_masks[this_trip])) continue;
                         /* skip this trip if it doesn't have all our required attributes */
                         if ( ! ((req->trip_attributes & route_trip_attributes[this_trip]) == req->trip_attributes)) continue;
-                        /* skip this trip if the realtime delay equals CANCELED */
-                        if ( route_trips[this_trip].realtime_delay == CANCELED) continue;
 
                         /* consider the arrival or departure time on the current service day */
                         rtime_t time = tdata_stoptime (router->tdata, route_idx, this_trip, route_stop, req->arrive_by, serviceday);
@@ -922,7 +909,9 @@ static inline char *plan_render_itinerary (struct itinerary *itin, tdata_t *tdat
         char *short_name = (leg->route == WALK) ? "walk" : tdata_shortname_for_route (tdata, leg->route);
         char *headsign = (leg->route == WALK) ? "walk" : tdata_headsign_for_route (tdata, leg->route);
         char *productcategory = (leg->route == WALK) ? "" : tdata_productcategory_for_route (tdata, leg->route);
-        float delay_min = (leg->route == WALK) ? 0 : tdata_delay_min (tdata, leg->route, leg->trip);
+        // TODO: change delay_min to trip->stoptimes + trip->begin_time vs triptimes
+        // float delay_min = (leg->route == WALK) ? 0 : tdata_delay_min (tdata, leg->route, leg->trip);
+        float delay_min = 0;
 
         char *leg_mode = NULL;
         if (leg->route == WALK) {
@@ -1026,27 +1015,27 @@ uint32_t rrrrandom(uint32_t limit) {
 }
 
 uint32_t rrrrandom_stop_by_agency(tdata_t *tdata, uint16_t agency_index) {
-	uint32_t n_routes_agency = 0;
+    uint32_t n_routes_agency = 0;
 
-	for (uint32_t route_idx = 0; route_idx < tdata->n_routes; route_idx++) {
-		if (tdata->routes[route_idx].agency_index == agency_index) n_routes_agency++;
-	}
+    for (uint32_t route_idx = 0; route_idx < tdata->n_routes; route_idx++) {
+        if (tdata->routes[route_idx].agency_index == agency_index) n_routes_agency++;
+    }
 
-	if (n_routes_agency == 0) return NONE;
+    if (n_routes_agency == 0) return NONE;
 
-	n_routes_agency = rrrrandom (n_routes_agency + 1);
+    n_routes_agency = rrrrandom (n_routes_agency + 1);
 
-	for (uint32_t route_idx = 0; route_idx < tdata->n_routes; route_idx++) {
-		if (tdata->routes[route_idx].agency_index == agency_index) {
-			if (n_routes_agency == 0) {
-				return tdata->route_stops[tdata->routes[route_idx].route_stops_offset + rrrrandom (tdata->routes[route_idx].n_stops)];
-			} else {
-				n_routes_agency--;
-			}
-		}
-	}
+    for (uint32_t route_idx = 0; route_idx < tdata->n_routes; route_idx++) {
+        if (tdata->routes[route_idx].agency_index == agency_index) {
+            if (n_routes_agency == 0) {
+                return tdata->route_stops[tdata->routes[route_idx].route_stops_offset + rrrrandom (tdata->routes[route_idx].n_stops)];
+            } else {
+                n_routes_agency--;
+            }
+        }
+    }
 
-	return NONE;
+    return NONE;
 }
 
 void router_request_initialize(router_request_t *req) {

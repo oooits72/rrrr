@@ -15,6 +15,7 @@
 #include <stdbool.h>
 
 #include "config.h"
+#include "bitset.h"
 #include "util.h"
 #include "radixtree.h"
 #include "gtfs-realtime.pb-c.h"
@@ -511,12 +512,6 @@ inline uint8_t *tdata_trip_attributes_for_route (tdata_t *td, uint32_t route_ind
     return td->trip_attributes + td->routes[route_index].trip_ids_offset;
 }
 
-/* Signed delay of the specified trip, in seconds. */
-inline float tdata_delay_min (tdata_t *td, uint32_t route_index, uint32_t trip_index) {
-    trip_t *trips = tdata_trips_for_route(td, route_index);
-    return RTIME_TO_SEC_SIGNED(trips[trip_index].realtime_delay) / 60.0;
-}
-
 void tdata_dump_route(tdata_t *td, uint32_t route_idx, uint32_t trip_idx) {
     uint32_t *stops = tdata_stops_for_route(td, route_idx);
     route_t route = td->routes[route_idx];
@@ -612,6 +607,16 @@ void tdata_apply_gtfsrt_time (TransitRealtime__TripUpdate__StopTimeUpdate *updat
     }
 }
 
+static inline
+void realtime_free_tripidx (tdata_t *tdata, uint32_t trip_index) {
+    if (tdata->trip_stoptimes[trip_index]) {
+        free(tdata->trip_stoptimes[trip_index]);
+        tdata->trip_stoptimes[trip_index] = NULL;
+        /* TODO: also free a forked route and the reference to it */
+        /* TODO: restore original validity */
+    }
+}
+
 /*
   Decodes the GTFS-RT message of lenth len in buffer buf, extracting vehicle position messages
   and using the delay extension (1003) to update RRRR's per-trip delay information.
@@ -630,191 +635,151 @@ void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *stopid_index, RadixTree *tri
 
         // printf("  entity %d has id %s\n", e, entity->id);
         TransitRealtime__TripUpdate *rt_trip_update = rt_entity->trip_update;
-        TransitRealtime__VehiclePosition *rt_vehicle = rt_entity->vehicle;
         #ifdef RRRR_REALTIME_EXPANDED
         if (rt_trip_update) {
             TransitRealtime__TripDescriptor *rt_trip = rt_trip_update->trip;
             if (rt_trip == NULL) continue;
 
-            char *trip_id = rt_trip->trip_id;
-            uint32_t trip_index = rxt_find (tripid_index, trip_id);
+            uint32_t trip_index = rxt_find (tripid_index, rt_trip->trip_id);
             if (trip_index == RADIX_TREE_NONE) {
                 printf ("    trip id was not found in the radix tree.\n");
                 continue;
             }
 
             if (rt_entity->is_deleted) {
-                free(tdata->trip_stoptimes[trip_index]);
-                #ifdef RRRR_REALTIME_DELAY
-                trip_t *trip = tdata->trips + trip_index;
-                trip->realtime_delay = SEC_TO_RTIME(0);
-                #endif
+                realtime_free_tripidx (tdata, trip_index);
                 continue;
-            } else {
-                route_t *route = tdata->routes + tdata->trip_routes[trip_index];
-                trip_t  *trip = tdata->trips + trip_index;
-
-                if (rt_trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__CANCELED) {
-                    #ifdef RRRR_REALTIME_DELAY
-                    trip->realtime_delay = CANCELED;
-                    if (tdata->trip_stoptimes[trip_index]) {
-                        free(tdata->trip_stoptimes[trip_index]);
-                        tdata->trip_stoptimes[trip_index] = NULL;
-                    }
-                    #else
-                    if (tdata->trip_stoptimes[trip_index] == NULL) {
-                        tdata->trip_stoptimes[trip_index] = (stoptime_t *) malloc(route->n_stops * sizeof(stoptime_t));
-                    }
-
-                    for (uint32_t rs = 0; rs < route->n_stops; ++rs) {
-                        tdata->trip_stoptimes[trip_index][rs].arrival   = CANCELED;
-                        tdata->trip_stoptimes[trip_index][rs].departure = CANCELED;
-                    }
-                    #endif
-                } else if (rt_trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__SCHEDULED) {
-                    if (rt_trip_update->n_stop_time_update) {
-                        /* When the route changes, we have to fork a new route, and implicitly cancel this one */
-                        bool changed_route = false;
-                        bool nodata_route = false;
-
-                        for (size_t stu = 0; stu < rt_trip_update->n_stop_time_update && !changed_route; ++stu) {
-                            TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
-
-                            changed_route |= (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__ADDED ||
-                                              rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED ||
-                                              rt_stop_time_update->departure == NULL);
-                            nodata_route  &= (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__NO_DATA);
-                        }
-
-                        /* This entire route doesn't have any data */
-                        if (nodata_route) {
-                            /* If data previously was available, we should fall back to the schedule */
-                            if (tdata->trip_stoptimes[trip_index]) {
-                                free(tdata->trip_stoptimes[trip_index]);
-                                tdata->trip_stoptimes[trip_index] = NULL;
-
-                                /* TODO: also free a forked route and the reference to it */
-                            }
-
-                            /* In any case, we are done with processing this entity. */
-                            continue;
-                        }
-
-                        /* If the trip has a different route, for example stops have been added or cancelled
-                         * we must fork this trip into a new route
-                         */
-                        if (changed_route) {
-                            /* TODO: Handle different route */
-							printf ("WARNING: this is a changed route!\n");
-                        } else {
-                            /* Normal case: at least one SCHEDULED or some NO_DATA stops have been observed */
-                            if (tdata->trip_stoptimes[trip_index] == NULL) {
-                                /* If the expanded timetable does not contain an entry yet, we are creating one */
-                                tdata->trip_stoptimes[trip_index] = (stoptime_t *) malloc(route->n_stops * sizeof(stoptime_t));
-                            }
-
-                            /* The initial time-demand based schedules */
-                            stoptime_t *trip_times = tdata->stop_times + trip->stop_times_offset;
-
-                            /* First re-initialise the old values from the schedule */
-                            for (uint32_t rs = 0; rs < route->n_stops; ++rs) {
-                                tdata->trip_stoptimes[trip_index][rs].arrival   = trip->begin_time + trip_times[rs].arrival;
-                                tdata->trip_stoptimes[trip_index][rs].departure = trip->begin_time + trip_times[rs].departure;
-                            }
-
-                            uint32_t rs = 0;
-                            for (size_t stu = 0; stu < rt_trip_update->n_stop_time_update; ++stu) {
-                                TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
-
-                                char *stop_id = rt_stop_time_update->stop_id;
-                                uint32_t stop_index = rxt_find (stopid_index, stop_id);
-                                uint32_t *route_stops = tdata->route_stops + route->route_stops_offset;
-
-                                if (route_stops[rs] == stop_index) {
-                                    if (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED) {
-                                        tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
-                                    }
-                                    /* In case of NO_DATA we won't do anything */
-                                    rs++;
-
-                                } else {
-                                    /* we do not align up with the realtime messages */
-                                    if (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED) {
-                                        uint32_t propagate = rs;
-                                        while (route_stops[++rs] != stop_index && rs < route->n_stops);
-                                        if (route_stops[rs] == stop_index) {
-                                            if (stu > 0) {
-                                                TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update_prev = rt_stop_time_update - 1;
-                                                if (rt_stop_time_update_prev->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED &&
-                                                    rt_stop_time_update_prev->departure && rt_stop_time_update_prev->departure->has_delay) {
-                                                    for (propagate; propagate < rs; ++propagate) {
-                                                        tdata->trip_stoptimes[trip_index][propagate].arrival   += SEC_TO_RTIME(rt_stop_time_update_prev->departure->delay);
-                                                        tdata->trip_stoptimes[trip_index][propagate].departure += SEC_TO_RTIME(rt_stop_time_update_prev->departure->delay);
-                                                    }
-                                                }
-                                            }
-                                            tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
-                                        } else {
-                                            /* we couldn't find the stop at all */
-                                            rs = propagate;
-                                        }
-                                        rs++;
-                                    }
-                                }
-                            }
-
-                            /* the last StopTimeUpdate isn't the end of route_stops set SCHEDULED,
-                             * and the departure has a delay, naively propagate the delay */
-                            TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[rt_trip_update->n_stop_time_update - 1];
-                            if (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED &&
-                                rt_stop_time_update->departure && rt_stop_time_update->departure->has_delay) {
-                                for (rs; rs < route->n_stops; ++rs) {
-                                    tdata->trip_stoptimes[trip_index][rs].arrival   += SEC_TO_RTIME(rt_stop_time_update->departure->delay);
-                                    tdata->trip_stoptimes[trip_index][rs].departure += SEC_TO_RTIME(rt_stop_time_update->departure->delay);
-                                }
-                            }
-                        }
-                    }
-                }
             }
-        } else
-        #endif
-        #ifdef RRRR_REALTIME_DELAY
-        if (rt_vehicle) {
-            TransitRealtime__TripDescriptor *rt_trip = rt_vehicle->trip;
-            if (rt_trip == NULL) continue;
 
-            char *trip_id = rt_trip->trip_id;
-            uint32_t trip_index = rxt_find (tripid_index, trip_id);
-            if (trip_index == RADIX_TREE_NONE) {
-                printf ("    trip id was not found in the radix tree.\n");
+            if (!rt_trip->start_date) {
+                printf("WARNING: not handling realtime updates without a start date!\n");
                 continue;
+            }
 
-            } else {
-                trip_t *trip = tdata->trips + trip_index;
-                int32_t delay_sec = 0;
+            route_t *route = tdata->routes + tdata->trip_routes[trip_index];
+            trip_t  *trip = tdata->trips + trip_index;
 
-                if (rt_entity->is_deleted) {
-                    trip->realtime_delay = SEC_TO_RTIME(delay_sec);
+            /* Take care of the realtime validity */
+
+            struct tm ltm;
+            memset (&ltm, 0, sizeof(struct tm));
+            strptime (rt_trip->start_date, "%Y%m%d", &ltm);
+            ltm.tm_isdst = -1;
+            time_t epochtime = mktime(&ltm);
+            uint32_t cal_day;
+
+            if (epochtime >= tdata->calendar_start_time) {
+                cal_day = (epochtime - tdata->calendar_start_time) / SEC_IN_ONE_DAY;
+                if (cal_day > 31 ) {
+                    printf("WARNING: the operational day is 32 further than our calendar!\n");
                     continue;
                 }
+            }
 
-                if (rt_trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__CANCELED) {
-                    delay_sec = CANCELED;
-                } else {
-                    TransitRealtime__OVapiVehiclePosition *rt_ovapi_vehicle_position = rt_vehicle->ovapi_vehicle_position;
-                    if (rt_ovapi_vehicle_position == NULL) printf ("    entity contains no delay message.\n");
-                    else delay_sec = rt_ovapi_vehicle_position->delay;
+            if (rt_trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__CANCELED) {
+                /* Apply the cancel to the schedule */
+                tdata->trip_active[trip_index] &= ~(1 << cal_day);
 
-                    if (abs(delay_sec) > 60 * 120) {
-                        printf ("    filtering out extreme delay of %d sec.\n", delay_sec);
-                        delay_sec = 0;
+            } else if (rt_trip->schedule_relationship == TRANSIT_REALTIME__TRIP_DESCRIPTOR__SCHEDULE_RELATIONSHIP__SCHEDULED) {
+                /* Mark in the schedule the trip is scheduled */
+                tdata->trip_active[trip_index] |=  (1 << cal_day);
+
+                if (rt_trip_update->n_stop_time_update) {
+                    /* When the route changes, we have to fork a new route, and implicitly cancel this one */
+                    bool changed_route = false;
+                    bool nodata_route = false;
+
+                    for (size_t stu = 0; stu < rt_trip_update->n_stop_time_update && !changed_route; ++stu) {
+                        TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
+
+                        changed_route |= (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__ADDED ||
+                                            rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED ||
+                                            rt_stop_time_update->departure == NULL);
+                        nodata_route  &= (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__NO_DATA);
+                    }
+
+                    /* This entire route doesn't have any data */
+                    if (nodata_route) {
+                        /* If data previously was available, we should fall back to the schedule */
+                        realtime_free_tripidx (tdata, trip_index);
+
+                        /* In any case, we are done with processing this entity. */
+                        continue;
+                    }
+
+                    /* If the trip has a different route, for example stops have been added or cancelled we must fork this trip into a new route */
+                    if (changed_route) {
+                        /* TODO: Handle different route */
+                        printf ("WARNING: this is a changed route!\n");
+                    } else {
+                        /* Normal case: at least one SCHEDULED or some NO_DATA stops have been observed */
+                        if (tdata->trip_stoptimes[trip_index] == NULL) {
+                            /* If the expanded timetable does not contain an entry yet, we are creating one */
+                            tdata->trip_stoptimes[trip_index] = (stoptime_t *) malloc(route->n_stops * sizeof(stoptime_t));
+                        }
+
+                        /* The initial time-demand based schedules */
+                        stoptime_t *trip_times = tdata->stop_times + trip->stop_times_offset;
+
+                        /* First re-initialise the old values from the schedule */
+                        for (uint32_t rs = 0; rs < route->n_stops; ++rs) {
+                            tdata->trip_stoptimes[trip_index][rs].arrival   = trip->begin_time + trip_times[rs].arrival;
+                            tdata->trip_stoptimes[trip_index][rs].departure = trip->begin_time + trip_times[rs].departure;
+                        }
+
+                        uint32_t rs = 0;
+                        for (size_t stu = 0; stu < rt_trip_update->n_stop_time_update; ++stu) {
+                            TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
+
+                            char *stop_id = rt_stop_time_update->stop_id;
+                            uint32_t stop_index = rxt_find (stopid_index, stop_id);
+                            uint32_t *route_stops = tdata->route_stops + route->route_stops_offset;
+
+                            if (route_stops[rs] == stop_index) {
+                                if (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED) {
+                                    tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
+                                }
+                                /* In case of NO_DATA we won't do anything */
+                                rs++;
+
+                            } else {
+                                /* we do not align up with the realtime messages */
+                                if (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED) {
+                                    uint32_t propagate = rs;
+                                    while (route_stops[++rs] != stop_index && rs < route->n_stops);
+                                    if (route_stops[rs] == stop_index) {
+                                        if (stu > 0) {
+                                            TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update_prev = rt_stop_time_update - 1;
+                                            if (rt_stop_time_update_prev->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED &&
+                                                rt_stop_time_update_prev->departure && rt_stop_time_update_prev->departure->has_delay) {
+                                                for (propagate; propagate < rs; ++propagate) {
+                                                    tdata->trip_stoptimes[trip_index][propagate].arrival   += SEC_TO_RTIME(rt_stop_time_update_prev->departure->delay);
+                                                    tdata->trip_stoptimes[trip_index][propagate].departure += SEC_TO_RTIME(rt_stop_time_update_prev->departure->delay);
+                                                }
+                                            }
+                                        }
+                                        tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
+                                    } else {
+                                        /* we couldn't find the stop at all */
+                                        rs = propagate;
+                                    }
+                                    rs++;
+                                }
+                            }
+                        }
+
+                        /* the last StopTimeUpdate isn't the end of route_stops set SCHEDULED,
+                            * and the departure has a delay, naively propagate the delay */
+                        TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[rt_trip_update->n_stop_time_update - 1];
+                        if (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED &&
+                            rt_stop_time_update->departure && rt_stop_time_update->departure->has_delay) {
+                            for (rs; rs < route->n_stops; ++rs) {
+                                tdata->trip_stoptimes[trip_index][rs].arrival   += SEC_TO_RTIME(rt_stop_time_update->departure->delay);
+                                tdata->trip_stoptimes[trip_index][rs].departure += SEC_TO_RTIME(rt_stop_time_update->departure->delay);
+                            }
+                        }
                     }
                 }
-
-                /* Apply delay. */
-                // printf ("    trip_id %s, trip number %d, applying delay of %d sec.\n", trip_id, trip_index, delay_sec);
-                trip->realtime_delay = SEC_TO_RTIME(delay_sec);
             }
         } else
         #endif
@@ -825,13 +790,9 @@ cleanup:
 }
 
 void tdata_clear_gtfsrt (tdata_t *tdata) {
-    /* If we had the total number of trips nested loops would not be necessary. */
-    for (uint32_t r = 0; r < tdata->n_routes; ++r) {
-        route_t route = tdata->routes[r];
-        trip_t *trips = tdata_trips_for_route(tdata, r);
-        for (int t = 0; t < route.n_trips; ++t) {
-            trips[t].realtime_delay = 0;
-        }
+    for (int trip_index = 0; trip_index < tdata->n_trips; ++trip_index) {
+        realtime_free_tripidx (tdata, trip_index);
+        /* TODO: we don't restore the original trip_active */
     }
 }
 

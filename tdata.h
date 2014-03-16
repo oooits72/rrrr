@@ -41,7 +41,7 @@ typedef struct trip trip_t;
 struct trip {
     uint32_t stop_times_offset; // The offset of the first stoptime of the time demand type used by this trip
     rtime_t  begin_time;        // The absolute start time since at the departure of the first stop
-    int16_t  realtime_delay;    // This is signed to indicate early or late. All zeros upon creation (but serves as padding).
+    int16_t  realtime_delay;    // TODO: PADDING ONLY - SHOULD BE REPLACED
 };
 
 #if 0
@@ -249,9 +249,6 @@ void tdata_apply_gtfsrt_alerts (tdata_t *tdata, RadixTree *routeid_index, RadixT
 void tdata_apply_gtfsrt_alerts_file (tdata_t *tdata, RadixTree *routeid_index, RadixTree *stopid_index, RadixTree *tripid_index, char *filename);
 
 void tdata_clear_gtfsrt_alerts (tdata_t *tdata);
-
-/* The signed delay of the specified trip in seconds. */
-float tdata_delay_min (tdata_t *td, uint32_t route_index, uint32_t trip_index);
 
 #define load_dynamic(fd, storage, type) \
     td->n_##storage = header->n_##storage; \

@@ -193,6 +193,7 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
 
     char servicedate[9] = "\0";
     int64_t departuredelay = 0;
+    int64_t arrivaldelay = 0;
 
     if (leg->route == WALK) mode = "WALK"; else {
         headsign = tdata_headsign_for_route(tdata, leg->route);
@@ -205,13 +206,27 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         trip_id = tdata_trip_id_for_route_trip_index(tdata, leg->route, leg->trip);
         trip_attributes = tdata_trip_attributes_for_route(tdata, leg->route)[leg->trip];
         rtime_t begin_time = tdata->trips[tdata->routes[leg->route].trip_ids_offset + leg->trip].begin_time;
+        #ifdef RRRR_REALTIME_EXPANDED
+        route_t *route = &tdata->routes[leg->route];
+        if (tdata->trip_stoptimes[route->trip_ids_offset + leg->trip]) {
+            trip_t *trip = &tdata->trips[leg->trip];
+            uint32_t *route_stops = &tdata->route_stops[route->route_stops_offset];
+            for (uint32_t rs = 0; rs < route->n_stops; ++rs) {
+                if (route_stops[rs] == leg->s0) {
+                    rtime_t orig = begin_time + tdata->stop_times[trip->stop_times_offset + rs].departure;
+                    departuredelay = (RTIME_TO_SEC_SIGNED(tdata->trip_stoptimes[route->trip_ids_offset + leg->trip][rs].departure) - RTIME_TO_SEC_SIGNED(orig)) * 1000LL;
+                } else if (route_stops[rs] == leg->s1) {
+                    rtime_t orig = begin_time + tdata->stop_times[trip->stop_times_offset + rs].arrival;
+                    arrivaldelay = (RTIME_TO_SEC_SIGNED(tdata->trip_stoptimes[route->trip_ids_offset + leg->trip][rs].arrival) - RTIME_TO_SEC_SIGNED(orig)) * 1000LL;
+                }
+            }
+        }
+        #endif
 
         struct tm ltm;
         time_t servicedate_time = date + RTIME_TO_SEC(begin_time);
         localtime_r(&servicedate_time, &ltm);
         strftime(servicedate, 9, "%Y%m%d", &ltm);
-
-        departuredelay = tdata_delay_min (tdata, leg->route, leg->trip);
 
         wheelchair_accessible = (trip_attributes & ta_accessible) ? "true" : NULL;
         if ((tdata->routes[leg->route].attributes & m_tram)      == m_tram)      mode = "TRAM";      else
@@ -234,7 +249,7 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         json_kl("startTime", starttime);
         json_kl("endTime",   endtime);
         json_kl("departureDelay", departuredelay);
-        json_kl("arrivalDelay", 0);
+        json_kl("arrivalDelay", arrivaldelay);
         json_kv("routeShortName", route_shortname);
         json_kv("route", route_shortname);
         json_kv("headsign", headsign);
@@ -337,9 +352,20 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
 
                 if (visible) {
                     // TODO: use tdata_depart and tdata_arrive to prevent realtime leakage outside the current date
+                    // ^^^ above still applicable?
                     trip_t trip = tdata->trips[tdata->routes[leg->route].trip_ids_offset + leg->trip];
-                    rtime_t arrival = trip.begin_time + tdata->stop_times[trip.stop_times_offset + i].arrival + trip.realtime_delay;
-                    rtime_t departure = trip.begin_time + tdata->stop_times[trip.stop_times_offset + i].departure + trip.realtime_delay;
+                    rtime_t arrival, departure;
+
+                    #ifdef RRRR_REALTIME_EXPANDED
+                    if (tdata->trip_stoptimes[tdata->routes[leg->route].trip_ids_offset + leg->trip]) {
+                        arrival = tdata->trip_stoptimes[tdata->routes[leg->route].trip_ids_offset + leg->trip][i].arrival;
+                        departure = tdata->trip_stoptimes[tdata->routes[leg->route].trip_ids_offset + leg->trip][i].departure;
+                    } else
+                    #endif
+                    {
+                        arrival = trip.begin_time + tdata->stop_times[trip.stop_times_offset + i].arrival;
+                        departure = trip.begin_time + tdata->stop_times[trip.stop_times_offset + i].departure;
+                    }
 
                     json_place(NULL, arrival, departure, stop_idx, tdata, date);
                 }
