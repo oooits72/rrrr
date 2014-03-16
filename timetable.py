@@ -492,7 +492,7 @@ for idx, route in enumerate(route_for_idx) :
         # by right-shifting all times two bits we get 72 hours (3 days) at 4 second resolution
         # The last struct member are the trip_attributes
         trip_attr = 0
-        if 'wheelchair_accessible' in trip_attributes[trip_i] and attributes[trip_i]['wheelchair_accessible']:
+        if 'wheelchair_accessible' in trip_attributes[trip_i] and trip_attributes[trip_i]['wheelchair_accessible']:
             trip_attr |= 1
 
         out.write(trip_t.pack(timedemandgroups_offsets[timedemandgroupref], first_departure >> 2, trip_attr))
