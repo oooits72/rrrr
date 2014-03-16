@@ -44,20 +44,6 @@ struct trip {
     int16_t  realtime_delay;    // TODO: PADDING ONLY - SHOULD BE REPLACED
 };
 
-#if 0
-typedef struct trip_expanded trip_expanded_t;
-struct trip_expanded {
-    uint32_t *route_stops;
-    rtime_t *stop_times;
-    char *headsign;
-    uint16_t n_stops;
-    uint16_t attributes;
-    uint16_t agency_index;
-    uint16_t shortname_index;
-    uint16_t productcategory_index;
-};
-#endif
-
 typedef struct stoptime stoptime_t;
 struct stoptime {
     rtime_t arrival;
