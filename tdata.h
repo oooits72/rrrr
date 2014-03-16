@@ -234,9 +234,9 @@ void tdata_clear_gtfsrt_alerts (tdata_t *tdata);
 
 #define load_dynamic(fd, storage, type) \
     td->n_##storage = header->n_##storage; \
-    td->storage = (type*) malloc (RRRR_DYNAMIC_SLACK * td->n_##storage * sizeof(type)); \
+    td->storage = (type*) malloc (RRRR_DYNAMIC_SLACK * (td->n_##storage + 1) * sizeof(type)); \
     lseek (fd, header->loc_##storage, SEEK_SET); \
-    read (fd, td->storage, td->n_##storage * sizeof(type))
+    read (fd, td->storage, (td->n_##storage + 1) * sizeof(type))
 
 #define load_dynamic_string(fd, storage) \
     td->n_##storage = header->n_##storage; \
