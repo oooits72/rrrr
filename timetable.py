@@ -150,7 +150,7 @@ def write_string_table(strings) :
 # make this into a method on a Header class
 # On 64-bit architectures using gcc long int is at least an int64_t.
 # We were using L in platform dependent mode, which just happened to work. TODO switch to platform independent mode?
-struct_header = Struct('8sQ53I')
+struct_header = Struct('7sQ52I')
 def write_header () :
     """ Write out a file header containing offsets to the beginning of each subsection.
     Must match struct transit_data_header in transitdata.c """
