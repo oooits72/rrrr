@@ -700,18 +700,13 @@ void tdata_apply_gtfsrt (tdata_t *tdata, RadixTree *stopid_index, RadixTree *tri
                             continue;
                         }
 
-
-
-                        #if 0
                         /* If the trip has a different route, for example stops have been added or cancelled
                          * we must fork this trip into a new route
                          */
                         if (changed_route) {
                             /* TODO: Handle different route */
-                        } else
-                        #endif
-
-                        {
+							printf ("WARNING: this is a changed route!\n");
+                        } else {
                             /* Normal case: at least one SCHEDULED or some NO_DATA stops have been observed */
                             if (tdata->trip_stoptimes[trip_index] == NULL) {
                                 /* If the expanded timetable does not contain an entry yet, we are creating one */
