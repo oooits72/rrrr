@@ -522,7 +522,6 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
         uint32_t *route_stops = tdata_stops_for_route(router->tdata, route_idx);
         uint8_t  *route_stop_attributes = tdata_stop_attributes_for_route(router->tdata, route_idx);
         trip_t   *route_trips = tdata_trips_for_route(router->tdata, route_idx); // TODO use to avoid calculating at every stop
-        uint8_t  *route_trip_attributes = tdata_trip_attributes_for_route(router->tdata, route_idx);
         calendar_t *trip_masks  = tdata_trip_masks_for_route(router->tdata, route_idx);
         uint32_t      trip = NONE;             // trip index within the route. NONE means not yet boarded.
         uint32_t      board_stop = 0;          // stop index where that trip was boarded
@@ -612,7 +611,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         /* skip this trip if it is not running on the current service day */
                         if ( ! (serviceday->mask & trip_masks[this_trip])) continue;
                         /* skip this trip if it doesn't have all our required attributes */
-                        if ( ! ((req->trip_attributes & route_trip_attributes[this_trip]) == req->trip_attributes)) continue;
+                        if ( ! ((req->trip_attributes & route_trips[this_trip].trip_attributes) == req->trip_attributes)) continue;
 
                         /* consider the arrival or departure time on the current service day */
                         rtime_t time = tdata_stoptime (router->tdata, route_idx, this_trip, route_stop, req->arrive_by, serviceday);

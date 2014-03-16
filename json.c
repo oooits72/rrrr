@@ -185,7 +185,6 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
     char *productcategory = NULL;
     char *route_id = NULL;
     char *trip_id = NULL;
-    uint8_t trip_attributes = 0;
     char *wheelchair_accessible = NULL;
     char *agency_id = NULL;
     char *agency_name = NULL;
@@ -204,12 +203,11 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         agency_name = tdata_agency_name_for_route(tdata, leg->route);
         agency_url = tdata_agency_url_for_route(tdata, leg->route);
         trip_id = tdata_trip_id_for_route_trip_index(tdata, leg->route, leg->trip);
-        trip_attributes = tdata_trip_attributes_for_route(tdata, leg->route)[leg->trip];
+        trip_t *trip = &tdata->trips[leg->trip];
         rtime_t begin_time = tdata->trips[tdata->routes[leg->route].trip_ids_offset + leg->trip].begin_time;
         #ifdef RRRR_REALTIME_EXPANDED
         route_t *route = &tdata->routes[leg->route];
         if (tdata->trip_stoptimes[route->trip_ids_offset + leg->trip]) {
-            trip_t *trip = &tdata->trips[leg->trip];
             uint32_t *route_stops = &tdata->route_stops[route->route_stops_offset];
             for (uint32_t rs = 0; rs < route->n_stops; ++rs) {
                 if (route_stops[rs] == leg->s0) {
@@ -228,7 +226,7 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         localtime_r(&servicedate_time, &ltm);
         strftime(servicedate, 9, "%Y%m%d", &ltm);
 
-        wheelchair_accessible = (trip_attributes & ta_accessible) ? "true" : NULL;
+        wheelchair_accessible = (trip->trip_attributes & ta_accessible) ? "true" : NULL;
         if ((tdata->routes[leg->route].attributes & m_tram)      == m_tram)      mode = "TRAM";      else
         if ((tdata->routes[leg->route].attributes & m_subway)    == m_subway)    mode = "SUBWAY";    else
         if ((tdata->routes[leg->route].attributes & m_rail)      == m_rail)      mode = "RAIL";      else

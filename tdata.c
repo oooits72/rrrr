@@ -35,7 +35,6 @@ struct tdata_header {
     uint32_t n_route_stop_attributes;
     uint32_t n_stop_times;
     uint32_t n_trips;
-    uint32_t n_trip_attributes;
     uint32_t n_stop_routes;
     uint32_t n_transfer_target_stops;
     uint32_t n_transfer_dist_meters;
@@ -62,7 +61,6 @@ struct tdata_header {
     uint32_t loc_route_stop_attributes;
     uint32_t loc_stop_times;
     uint32_t loc_trips;
-    uint32_t loc_trip_attributes;
     uint32_t loc_stop_routes;
     uint32_t loc_transfer_target_stops;
     uint32_t loc_transfer_dist_meters;
@@ -350,7 +348,6 @@ void tdata_load_dynamic(char *filename, tdata_t *td) {
     load_dynamic (fd, route_stop_attributes, uint8_t);
     load_dynamic (fd, stop_times, stoptime_t);
     load_dynamic (fd, trips, trip_t);
-    load_dynamic (fd, trip_attributes, uint8_t);
     load_dynamic (fd, stop_routes, uint32_t);
     load_dynamic (fd, transfer_target_stops, uint32_t);
     load_dynamic (fd, transfer_dist_meters, uint8_t);
@@ -408,7 +405,6 @@ void tdata_load(char *filename, tdata_t *td) {
     load_mmap (b, route_stop_attributes, uint8_t);
     load_mmap (b, stop_times, stoptime_t);
     load_mmap (b, trips, trip_t);
-    load_mmap (b, trip_attributes, uint8_t);
     load_mmap (b, stop_routes, uint32_t);
     load_mmap (b, transfer_target_stops, uint32_t);
     load_mmap (b, transfer_dist_meters, uint8_t);
@@ -448,7 +444,6 @@ void tdata_close_dynamic(tdata_t *td) {
     free (td->route_stop_attributes);
     free (td->stop_times);
     free (td->trips);
-    free (td->trip_attributes);
     free (td->stop_routes);
     free (td->transfer_target_stops);
     free (td->transfer_dist_meters);
@@ -506,10 +501,6 @@ inline stoptime_t *tdata_timedemand_type(tdata_t *td, uint32_t route_index, uint
 
 inline trip_t *tdata_trips_for_route (tdata_t *td, uint32_t route_index) {
     return td->trips + td->routes[route_index].trip_ids_offset;
-}
-
-inline uint8_t *tdata_trip_attributes_for_route (tdata_t *td, uint32_t route_index) {
-    return td->trip_attributes + td->routes[route_index].trip_ids_offset;
 }
 
 void tdata_dump_route(tdata_t *td, uint32_t route_idx, uint32_t trip_idx) {

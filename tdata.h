@@ -41,7 +41,7 @@ typedef struct trip trip_t;
 struct trip {
     uint32_t stop_times_offset; // The offset of the first stoptime of the time demand type used by this trip
     rtime_t  begin_time;        // The absolute start time since at the departure of the first stop
-    int16_t  realtime_delay;    // TODO: PADDING ONLY - SHOULD BE REPLACED
+    int16_t  trip_attributes;   // The trip_attributes, including CANCELED flag
 };
 
 typedef struct stoptime stoptime_t;
@@ -81,7 +81,6 @@ struct tdata {
     uint32_t n_route_stop_attributes;
     uint32_t n_stop_times;
     uint32_t n_trips;
-    uint32_t n_trip_attributes;
     uint32_t n_stop_routes;
     uint32_t n_transfer_target_stops;
     uint32_t n_transfer_dist_meters;
@@ -128,7 +127,6 @@ struct tdata {
     char *productcategories;
     calendar_t *trip_active;
     calendar_t *route_active;
-    uint8_t *trip_attributes;
     uint32_t route_ids_width;
     char *route_ids;
     uint32_t stop_ids_width;
@@ -200,8 +198,6 @@ uint32_t tdata_stopidx_by_stop_id(tdata_t*, char* stop_id, uint32_t start_index)
 uint32_t tdata_routeidx_by_route_id(tdata_t*, char* route_id, uint32_t start_index);
 
 char *tdata_trip_ids_for_route(tdata_t*, uint32_t route_index);
-
-uint8_t *tdata_trip_attributes_for_route(tdata_t*, uint32_t route_index);
 
 calendar_t *tdata_trip_masks_for_route(tdata_t*, uint32_t route_index);
 

@@ -167,7 +167,6 @@ def write_header () :
         nroute_stops, # n_route_stop_attributes
         nstoptimes, # n_stop_times
         ntrips, # n_trips
-        ntrips, # n_trip_attributes
         nstop_routes, # n_stop_routes
         ntargetstops, #n_transfer_target_stop
         ndistmeters, #n_transfer_dist_meters
@@ -194,7 +193,6 @@ def write_header () :
         loc_route_stop_attributes,
         loc_timedemandgroups,
         loc_trips,
-        loc_trip_attributes,
         loc_stop_routes,
         loc_transfer_target_stops,
         loc_transfer_dist_meters,
@@ -487,11 +485,18 @@ for idx, route in enumerate(route_for_idx) :
     trip_ids_offsets.append(tioffset)
     trip_ids = route.sorted_trip_ids()
     # print idx, route, len(trip_ids)
+    trip_attributes = route.getattributes()
+    trip_i = 0
     for timedemandgroupref, first_departure in db.fetch_timedemandgroups(trip_ids) :
         # 2**16 / 60 / 60 is only 18 hours
         # by right-shifting all times two bits we get 72 hours (3 days) at 4 second resolution
-        # The last struct member is a realtime offset. The space is not wasted since it would be needed as struct padding anyway.
-        out.write(trip_t.pack(timedemandgroups_offsets[timedemandgroupref], first_departure >> 2, 0))
+        # The last struct member are the trip_attributes
+        trip_attr = 0
+        if 'wheelchair_accessible' in trip_attributes[trip_i] and attributes[trip_i]['wheelchair_accessible']:
+            trip_attr |= 1
+
+        out.write(trip_t.pack(timedemandgroups_offsets[timedemandgroupref], first_departure >> 2, trip_attr))
+        trip_i += 1
         toffset += 1
     all_trip_ids.extend(trip_ids)
     tioffset += len(trip_ids)
@@ -500,16 +505,6 @@ trip_ids_offsets.append(tioffset) # sentinel
 assert len(trips_offsets) == nroutes + 1
 assert len(trip_ids_offsets) == nroutes + 1
 ntrips = len(all_trip_ids)
-
-print "writing trip attributes"
-write_text_comment("TRIP ATTRIBUTES")
-loc_trip_attributes = tell()
-for idx, route in enumerate(route_for_idx):
-    for attributes in route.getattributes():
-        trip_attr = 0
-        if 'wheelchair_accessible' in attributes and attributes['wheelchair_accessible']:
-            trip_attr |= 1
-        writebyte(trip_attr)
 
 print "saving a list of routes serving each stop"
 write_text_comment("ROUTES BY STOP")
