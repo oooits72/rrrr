@@ -59,6 +59,21 @@ static inline void flag_routes_for_stop (router_t *router, router_request_t *req
            I printf ("  route running\n");
         }
     }
+
+    #ifdef RRRR_REALTIME_EXPANDED
+    if (router->servicedays[1].apply_realtime && router->tdata->rt_stop_routes[stop_index]) {
+        routes = router->tdata->rt_stop_routes[stop_index]->list;
+        n_routes = router->tdata->rt_stop_routes[stop_index]->len;
+        for (uint32_t i = 0; i < n_routes; ++i) {
+            I printf ("  flagging changed route %d at stop %d\n", routes[i], stop_index);
+            /* extra routes should only be applied on the current day */
+            if ((req->mode & router->tdata->routes[routes[i]].attributes) > 0) {
+                bitset_set (router->updated_routes, routes[i]);
+                I printf ("  route running\n");
+            }
+        }
+    }
+    #endif
 }
 
 static inline void unflag_banned_routes (router_t *router, router_request_t *req) {
