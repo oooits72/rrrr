@@ -310,14 +310,22 @@ void tdata_alloc_expanded(tdata_t *td) {
             td->trip_routes[td->routes[r].trip_ids_offset + t] = r;
         }
     }
+
+     td->rt_stop_routes = (list_t **) calloc(td->n_stops, sizeof(list_t *));
 }
 
 void tdata_free_expanded(tdata_t *td) {
+    free (td->trip_routes);
+
     for (uint32_t t = 0; t < td->n_trips; ++t)
         free (td->trip_stoptimes[t]);
 
     free (td->trip_stoptimes);
-    free (td->trip_routes);
+
+    for (uint32_t s = 0; s < td->n_stops; ++s)
+        free (td->rt_stop_routes[s]->list);
+
+    free (td->rt_stop_routes);
 }
 #endif
 
@@ -606,6 +614,21 @@ void realtime_free_tripidx (tdata_t *tdata, uint32_t trip_index) {
         /* TODO: also free a forked route and the reference to it */
         /* TODO: restore original validity */
     }
+}
+
+/* rt_stop_routes store the delta to the planned stop_routes */
+static inline
+void tdata_rt_stop_routes_append (tdata_t *tdata, uint32_t stop_index, uint32_t route_index) {
+    for (uint32_t i = 0; i < tdata->rt_stop_routes[stop_index]->len; ++i) {
+        if (((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[i] == route_index) return;
+    }
+
+    if (tdata->rt_stop_routes[stop_index]->len == tdata->rt_stop_routes[stop_index]->size) {
+        tdata->rt_stop_routes[stop_index]->list = realloc(tdata->rt_stop_routes[stop_index], (tdata->rt_stop_routes[stop_index]->size + 8) * sizeof(uint32_t));
+        tdata->rt_stop_routes[stop_index]->size += 8;
+    }
+
+    ((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[tdata->rt_stop_routes[stop_index]->len++] = route_index;
 }
 
 /*
