@@ -14,23 +14,20 @@
 #include "router.h"
 
 int main(int argc, char **argv) {
-    if (argc < 4) {
-        printf("Usage:\n%s timetable.dat AGENCY agencyname\n"
-               "                            ROUTE route_idx [trip_idx]\n"
-               "                            ROUTEID route_id\n"
-               "                            STOP stop_idx\n"
-               "                            STOPID stop_id\n"
-               "                            STOPNAME stopname\n"
-               "                            TRANSFER stop_idx stop_idx\n", argv[0]);
-        exit(EXIT_SUCCESS);
-    }
+    if (argc < 3) goto usage;
 
     /* SETUP */
 
     // load transit data from disk
     tdata_t tdata;
     tdata_load(argv[1], &tdata);
-    // tdata_dump(&tdata);
+
+    if (strcmp(argv[2], "DUMP") == 0) {
+        tdata_dump(&tdata);
+        goto ok;
+    }
+
+    if (argc < 4) goto usage;
 
     if (strcmp(argv[2], "AGENCY") == 0) {
         uint32_t agency_index = tdata_agencyidx_by_agency_name(&tdata, argv[3], 0);
@@ -87,7 +84,21 @@ int main(int argc, char **argv) {
         }
     }
 
+ok:
     tdata_close(&tdata);
     exit(EXIT_SUCCESS);
+
+usage:
+    if (argc < 3) {
+        printf("Usage:\n%s timetable.dat AGENCY agencyname\n"
+               "                            DUMP\n"
+               "                            ROUTE route_idx [trip_idx]\n"
+               "                            ROUTEID route_id\n"
+               "                            STOP stop_idx\n"
+               "                            STOPID stop_id\n"
+               "                            STOPNAME stopname\n"
+               "                            TRANSFER stop_idx stop_idx\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
 }
 
