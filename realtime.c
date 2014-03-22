@@ -56,7 +56,6 @@ http://www.lenholgate.com/blog/2011/07/websockets-is-a-stream-not-a-message-base
 uint8_t msg[MAX_MESSAGE_LENGTH];
 size_t msg_len = 0;
 bool verbose = true;
-RadixTree *tripid_index;
 tdata_t tdata;
 
 static void msg_add_frame (uint8_t *frame, size_t len) {
@@ -104,12 +103,12 @@ static int callback_gtfs_rt (struct libwebsocket_context *this,
             if (msg_len == 0) {
                 /* single frame message, nothing in the buffer */
                 fprintf(stderr, "single-frame message. ");
-                if (len > 0) tdata_apply_gtfsrt (&tdata, tripid_index, in, len);
+                if (len > 0) tdata_apply_gtfsrt (&tdata, in, len);
             } else {
                 /* last frame in a multi-frame message */
                 fprintf(stderr, "had previous fragment frames. ");
                 msg_add_frame (in, len);
-                tdata_apply_gtfsrt (&tdata, tripid_index, msg, msg_len);
+                tdata_apply_gtfsrt (&tdata, msg, msg_len);
                 fprintf(stderr, "emptying message buffer. ");
                 msg_reset();
             }
@@ -197,7 +196,7 @@ int main(int argc, char **argv) {
     signal(SIGINT, sighandler);
 
     tdata_load (RRRR_INPUT_FILE, &tdata);
-    tripid_index = rxt_load_strings_from_tdata (tdata.trip_ids, tdata.trip_ids_width, tdata.n_trips);
+    tdata.tripid_index = rxt_load_strings_from_tdata (tdata.trip_ids, tdata.trip_ids_width, tdata.n_trips);
 
     /*
      * create the websockets context.  This tracks open connections and
