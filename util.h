@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+#include "config.h"
+
 /*
   2^16 / 60 / 60 is 18.2 hours at one-second resolution.
   By right-shifting times one bit, we get 36.4 hours (over 1.5 days) at 2 second resolution.
@@ -16,6 +18,15 @@
   and can also represent the longest rail journeys in Europe.
 */
 typedef uint16_t rtime_t;
+
+#ifdef RRRR_REALTIME_EXPANDED
+typedef struct list list_t;
+struct list {
+    void *list;
+    uint32_t size;
+    uint32_t len;
+};
+#endif
 
 #define SEC_TO_RTIME(x) ((x) >> 2)
 #define RTIME_TO_SEC(x) (((uint32_t)x) << 2)
