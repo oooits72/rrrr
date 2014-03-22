@@ -16,7 +16,7 @@
 int main(int argc, char **argv) {
     if (argc < 4) {
         printf("Usage:\n%s timetable.dat AGENCY agencyname\n"
-	       "                            ROUTE route_idx [trip_idx]\n"
+               "                            ROUTE route_idx [trip_idx]\n"
                "                            ROUTEID route_id\n"
                "                            STOP stop_idx\n"
                "                            STOPID stop_id\n"
@@ -34,12 +34,12 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[2], "AGENCY") == 0) {
         uint32_t agency_index = tdata_agencyidx_by_agency_name(&tdata, argv[3], 0);
-	while (agency_index != NONE) {
-	    printf ("%d %s %s %s\n", agency_index, tdata_agency_id_for_index(&tdata, agency_index),
-	                                           tdata_agency_name_for_index(&tdata, agency_index),
-	                                           tdata_agency_url_for_index(&tdata, agency_index));
-	    agency_index = tdata_agencyidx_by_agency_name(&tdata, argv[3], agency_index + 1);
-	}
+        while (agency_index != NONE) {
+            printf ("%d %s %s %s\n", agency_index, tdata_agency_id_for_index(&tdata, agency_index),
+                                                   tdata_agency_name_for_index(&tdata, agency_index),
+                                                   tdata_agency_url_for_index(&tdata, agency_index));
+            agency_index = tdata_agencyidx_by_agency_name(&tdata, argv[3], agency_index + 1);
+        }
     } else if (strcmp(argv[2], "ROUTE") == 0) {
         if (argc > 4) {
             tdata_dump_route(&tdata, strtol(argv[3], NULL, 10), strtol(argv[4], NULL, 10));
