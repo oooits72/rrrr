@@ -631,6 +631,18 @@ void tdata_rt_stop_routes_append (tdata_t *tdata, uint32_t stop_index, uint32_t 
     ((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[tdata->rt_stop_routes[stop_index]->len++] = route_index;
 }
 
+static inline
+void tdata_rt_stop_routes_remove (tdata_t *tdata, uint32_t stop_index, uint32_t route_index) {
+    for (uint32_t i = 0; i < tdata->rt_stop_routes[stop_index]->len; ++i) {
+        if (((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[i] == route_index) {
+            tdata->rt_stop_routes[stop_index]->len--;
+            ((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[i] = ((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[tdata->rt_stop_routes[stop_index]->len];
+            return;
+        }
+    }
+}
+
+
 /*
   Decodes the GTFS-RT message of lenth len in buffer buf, extracting vehicle position messages
   and using the delay extension (1003) to update RRRR's per-trip delay information.
