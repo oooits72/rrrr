@@ -642,6 +642,36 @@ void tdata_rt_stop_routes_remove (tdata_t *tdata, uint32_t stop_index, uint32_t 
     }
 }
 
+static inline
+uint16_t tdata_route_new(tdata_t *tdata, char *trip_id, uint16_t n_stops, uint16_t n_trips, uint16_t attributes, uint32_t headsign_offset, uint16_t agency_index, uint16_t shortname_index, uint16_t productcategory_index) {
+    route_t *new = &tdata->routes[tdata->n_routes];
+    new->route_stops_offset = tdata->n_route_stops;
+    new->trip_ids_offset = tdata->n_trips;
+    new->headsign_offset = headsign_offset;
+    new->n_stops = n_stops;
+    new->n_trips = n_trips;
+    new->attributes = attributes;
+    new->agency_index = agency_index;
+    new->productcategory_index = productcategory_index;
+
+    rxt_insert(tdata->routeid_index, trip_id, tdata->n_routes);
+
+    strncpy(&tdata->trip_ids[n_trips * tdata->trip_ids_width], trip_id, tdata->trip_ids_width);
+
+    tdata->n_route_stops += n_stops;
+    tdata->n_route_stop_attributes += n_stops;
+    tdata->n_trips += n_trips;
+    tdata->n_trip_ids += n_trips;
+    tdata->n_trip_active += n_trips;
+    tdata->n_route_active++;
+
+    for (uint32_t i = 0; i < n_stops; i++) {
+        tdata->route_stops[new->route_stops_offset + i] = NONE;
+    }
+
+    return tdata->n_routes++;
+}
+
 
 /*
   Decodes the GTFS-RT message of lenth len in buffer buf, extracting vehicle position messages
