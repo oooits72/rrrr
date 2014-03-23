@@ -761,7 +761,7 @@ void tdata_apply_gtfsrt (tdata_t *tdata, uint8_t *buf, size_t len) {
                                           rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED);
                         nodata_route  &= (rt_stop_time_update->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__NO_DATA);
 
-                        n_stops += (rt_stop_time_update->schedule_relationship != TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED);
+                        n_stops += (rt_stop_time_update->schedule_relationship != TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED && rt_stop_time_update->stop_id != NULL);
                     }
 
                     /* This entire route doesn't have any data */
@@ -826,16 +826,18 @@ void tdata_apply_gtfsrt (tdata_t *tdata, uint8_t *buf, size_t len) {
                             TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
                             if (rt_stop_time_update->schedule_relationship != TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED) {
                                 char *stop_id = rt_stop_time_update->stop_id;
-                                uint32_t stop_index = rxt_find (tdata->stopid_index, stop_id);
-                                if (tdata->route_stops[route_new->route_stops_offset + rs] != NONE && tdata->route_stops[route_new->route_stops_offset + rs] != stop_index) {
-                                    tdata_rt_stop_routes_remove (tdata, tdata->route_stops[route_new->route_stops_offset + rs], route_index);
+                                if (stop_id) {
+                                    uint32_t stop_index = rxt_find (tdata->stopid_index, stop_id);
+                                    if (tdata->route_stops[route_new->route_stops_offset + rs] != NONE && tdata->route_stops[route_new->route_stops_offset + rs] != stop_index) {
+                                        tdata_rt_stop_routes_remove (tdata, tdata->route_stops[route_new->route_stops_offset + rs], route_index);
+                                    }
+                                    /* TODO: Should this be communicated in GTFS-RT? */
+                                    tdata->route_stop_attributes[route_new->route_stops_offset + rs] = (rsa_boarding | rsa_alighting);
+                                    tdata->route_stops[route_new->route_stops_offset + rs] = stop_index;
+                                    tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
+                                    tdata_rt_stop_routes_append (tdata, stop_index, route_index);
+                                    rs++;
                                 }
-                                /* TODO: Should this be communicated in GTFS-RT? */
-                                tdata->route_stop_attributes[route_new->route_stops_offset + rs] = (rsa_boarding | rsa_alighting);
-                                tdata->route_stops[route_new->route_stops_offset + rs] = stop_index;
-                                tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][rs]);
-                                tdata_rt_stop_routes_append (tdata, stop_index, route_index);
-                                rs++;
                             }
                         }
 
