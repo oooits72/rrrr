@@ -863,6 +863,8 @@ void tdata_apply_gtfsrt (tdata_t *tdata, uint8_t *buf, size_t len) {
                             tdata->trip_stoptimes[trip_index][rs].departure = trip->begin_time + trip_times[rs].departure;
                         }
 
+                        TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update_prev = NULL;
+
                         uint32_t rs = 0;
                         for (size_t stu = 0; stu < rt_trip_update->n_stop_time_update; ++stu) {
                             TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
@@ -884,8 +886,7 @@ void tdata_apply_gtfsrt (tdata_t *tdata, uint8_t *buf, size_t len) {
                                     uint32_t propagate = rs;
                                     while (route_stops[++rs] != stop_index && rs < route->n_stops);
                                     if (route_stops[rs] == stop_index) {
-                                        if (stu > 0) {
-                                            TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update_prev = rt_stop_time_update - 1;
+                                        if (rt_stop_time_update_prev) {
                                             if (rt_stop_time_update_prev->schedule_relationship == TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SCHEDULED &&
                                                 rt_stop_time_update_prev->departure && rt_stop_time_update_prev->departure->has_delay) {
                                                 for (propagate; propagate < rs; ++propagate) {
@@ -902,6 +903,8 @@ void tdata_apply_gtfsrt (tdata_t *tdata, uint8_t *buf, size_t len) {
                                     rs++;
                                 }
                             }
+
+                            rt_stop_time_update_prev = rt_stop_time_update;
                         }
 
                         /* the last StopTimeUpdate isn't the end of route_stops set SCHEDULED,
