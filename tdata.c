@@ -765,8 +765,61 @@ void tdata_apply_gtfsrt (tdata_t *tdata, uint8_t *buf, size_t len) {
 
                     /* If the trip has a different route, for example stops have been added or cancelled we must fork this trip into a new route */
                     if (changed_route) {
-                        /* TODO: Handle different route */
+
                         printf ("WARNING: this is a changed route!\n");
+
+                        /* The idea is to fork a trip to a new route, based on the trip_id find if the trip_id already exists */
+                        char *trip_id_new = (char *) alloca (tdata->trip_ids_width * sizeof(char));
+                        trip_id_new[0] = '@';
+                        strncpy(&trip_id_new[1], rt_trip->trip_id, tdata->trip_ids_width - 1);
+
+                        uint32_t route_index = rxt_find (tdata->routeid_index, trip_id_new);
+                        route_t *route_new = NULL;
+
+                        if (route_index != RADIX_TREE_NONE) {
+                            /* Fixes the case where a trip changes a second time */
+                            route_new = &tdata->routes[route_index];
+                            if (route_new->n_stops != rt_trip_update->n_stop_time_update) {
+                                printf ("WARNING: this is a changed route being CHANGED again!\n");
+                                tdata->trip_stoptimes[route_new->trip_ids_offset] = (stoptime_t *) realloc(tdata->trip_stoptimes[route_new->trip_ids_offset], route_new->n_stops * sizeof(stoptime_t));
+                                for (uint32_t i = route_new->n_stops; i < rt_trip_update->n_stop_time_update; i++) {
+                                    tdata->route_stops[route_new->route_stops_offset + i] = NONE;
+                                }
+                                route_new->n_stops = rt_trip_update->n_stop_time_update;
+                            }
+                        }
+
+                        if (route_new == NULL) {
+                            route_index = tdata_route_new(tdata, trip_id_new, rt_trip_update->n_stop_time_update, 1, route->attributes, route->headsign_offset, route->agency_index, route->shortname_index, route->productcategory_index);
+                            route_new = &tdata->routes[route_index];
+                            tdata->trip_stoptimes[route_new->trip_ids_offset] = (stoptime_t *) malloc(route_new->n_stops * sizeof(stoptime_t));
+                            tdata->trips[route_new->trip_ids_offset].stop_times_offset = NONE;
+                            tdata->trips[route_new->trip_ids_offset].begin_time = UNREACHED;
+                            tdata->trips[route_new->trip_ids_offset].trip_attributes = trip->trip_attributes;
+                            tdata->route_active[route_new->trip_ids_offset] |= (1 << cal_day);
+                            tdata->trip_active[route_new->trip_ids_offset] |= (1 << cal_day);
+                            tdata->trip_routes[route_new->trip_ids_offset] = route_index;
+                        }
+
+                        /* We will always overwrite the entire route, due to the problem where we have the same length, but different route */
+                        for (size_t stu = 0; stu < rt_trip_update->n_stop_time_update; ++stu) {
+                            TransitRealtime__TripUpdate__StopTimeUpdate *rt_stop_time_update = rt_trip_update->stop_time_update[stu];
+                            if (rt_stop_time_update->schedule_relationship != TRANSIT_REALTIME__TRIP_UPDATE__STOP_TIME_UPDATE__SCHEDULE_RELATIONSHIP__SKIPPED) {
+                                char *stop_id = rt_stop_time_update->stop_id;
+                                uint32_t stop_index = rxt_find (tdata->stopid_index, stop_id);
+                                if (tdata->route_stops[route_new->route_stops_offset + stu] != NONE && tdata->route_stops[route_new->route_stops_offset + stu] != stop_index) {
+                                    tdata_rt_stop_routes_remove (tdata, tdata->route_stops[route_new->route_stops_offset + stu], route_index);
+                                }
+
+                                tdata->route_stops[route_new->route_stops_offset + stu] = stop_index;
+                                tdata_apply_gtfsrt_time (rt_stop_time_update, &tdata->trip_stoptimes[trip_index][stu]);
+                                tdata_rt_stop_routes_append (tdata, stop_index, route_index);
+                            }
+                        }
+
+                        route_new->min_time = tdata->trip_stoptimes[trip_index][0].arrival;
+                        route_new->max_time = tdata->trip_stoptimes[trip_index][route_new->n_stops - 1].departure;
+
                     } else {
                         /* Normal case: at least one SCHEDULED or some NO_DATA stops have been observed */
                         if (tdata->trip_stoptimes[trip_index] == NULL) {
