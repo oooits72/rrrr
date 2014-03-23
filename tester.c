@@ -113,13 +113,13 @@ int main(int argc, char **argv) {
     if (gtfsrt_file != NULL || gtfsrt_alerts_file != NULL) {
         tdata.stopid_index  = rxt_load_strings_from_tdata (tdata.stop_ids, tdata.stop_ids_width, tdata.n_stops);
         tdata.tripid_index  = rxt_load_strings_from_tdata (tdata.trip_ids, tdata.trip_ids_width, tdata.n_trips);
+        tdata.routeid_index = rxt_load_strings_from_tdata (tdata.route_ids, tdata.route_ids_width, tdata.n_routes);
         if (gtfsrt_file != NULL) {
             tdata_clear_gtfsrt (&tdata);
             tdata_apply_gtfsrt_file (&tdata, gtfsrt_file);
         }
 
         if (gtfsrt_alerts_file != NULL) {
-            tdata.routeid_index = rxt_load_strings_from_tdata (tdata.route_ids, tdata.route_ids_width, tdata.n_routes);
             tdata_clear_gtfsrt_alerts(&tdata);
             tdata_apply_gtfsrt_alerts_file (&tdata, gtfsrt_alerts_file);
         }
