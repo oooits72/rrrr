@@ -540,6 +540,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
         calendar_t *trip_masks  = tdata_trip_masks_for_route(router->tdata, route_idx);
         uint32_t      trip = NONE;             // trip index within the route. NONE means not yet boarded.
         uint32_t      board_stop = 0;          // stop index where that trip was boarded
+        uint32_t      board_route_stop = 0;    // route stop index where that trip was boarded
         rtime_t       board_time = 0;          // time when that trip was boarded
         serviceday_t *board_serviceday = NULL; // Service day on which that trip was boarded
         /*
@@ -651,6 +652,7 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                         // use a router_state struct for all this?
                         board_time = best_time;
                         board_stop = stop;
+                        board_route_stop = route_stop;
                         board_serviceday = best_serviceday;
                         trip = best_trip;
                     }
@@ -696,6 +698,9 @@ void router_round(router_t *router, router_request_t *req, uint8_t round) {
                     states[round][stop].back_trip  = trip;
                     states[round][stop].back_stop  = board_stop;
                     states[round][stop].board_time = board_time;
+                    states[round][stop].back_route_stop = board_route_stop;
+                    states[round][stop].route_stop = route_stop;
+
                     if (req->arrive_by) {
                         if (board_time < time) printf ("board time non-decreasing\n");
                     } else {
@@ -863,6 +868,8 @@ void router_result_to_plan (struct plan *plan, router_t *router, router_request_
             l->s1 = walk_stop;
             l->t0 = ride->time; /* Rendering the walk requires already having the ride arrival time */
             l->t1 = walk->walk_time;
+            l->d0 = 0;
+            l->d1 = 0;
             l->route = WALK;
             l->trip  = WALK;
             if (req->arrive_by) leg_swap (l);
@@ -873,6 +880,18 @@ void router_result_to_plan (struct plan *plan, router_t *router, router_request_
             l->s1 = ride_stop;
             l->t0 = ride->board_time;
             l->t1 = ride->time;
+            route_t *route = &router->tdata->routes[ride->back_route];
+            uint32_t trip_index = route->trip_ids_offset + ride->back_trip;
+            trip_t *trip = &router->tdata->trips[trip_index];
+
+            if (router->tdata->trip_stoptimes[trip_index] && router->tdata->stop_times[trip->stop_times_offset + ride->route_stop].arrival != UNREACHED) {
+                l->d0 = RTIME_TO_SEC_SIGNED(router->tdata->trip_stoptimes[trip_index][ride->back_route_stop].departure) - RTIME_TO_SEC_SIGNED(router->tdata->stop_times[trip->stop_times_offset + ride->back_route_stop].departure + trip->begin_time);
+                l->d1 = RTIME_TO_SEC_SIGNED(router->tdata->trip_stoptimes[trip_index][ride->route_stop].arrival) - RTIME_TO_SEC_SIGNED(router->tdata->stop_times[trip->stop_times_offset + ride->route_stop].arrival + trip->begin_time);
+            } else {
+                l->d0 = 0;
+                l->d1 = 0;
+            }
+
             l->route = ride->back_route;
             l->trip  = ride->back_trip;
             if (req->arrive_by) leg_swap (l);
@@ -925,7 +944,13 @@ static inline char *plan_render_itinerary (struct itinerary *itin, tdata_t *tdat
         char *productcategory = (leg->route == WALK) ? "" : tdata_productcategory_for_route (tdata, leg->route);
         // TODO: change delay_min to trip->stoptimes + trip->begin_time vs triptimes
         // float delay_min = (leg->route == WALK) ? 0 : tdata_delay_min (tdata, leg->route, leg->trip);
-        float delay_min = 0;
+        float delay_0 = 0.0;
+        float delay_1 = 0.0;
+
+        if (leg->route != WALK) {
+            delay_0 = leg->d0 / 60.0;
+            delay_1 = leg->d1 / 60.0;
+        }
 
         char *leg_mode = NULL;
         if (leg->route == WALK) {
@@ -971,8 +996,8 @@ static inline char *plan_render_itinerary (struct itinerary *itin, tdata_t *tdat
             }
         }
 
-        b += sprintf (b, "%s %5d %3d %5d %5d %s %s %+3.1f ;%s;%s;%s;%s;%s;%s;%s\n",
-            leg_mode, leg->route, leg->trip, leg->s0, leg->s1, ct0, ct1, delay_min,agency_name, short_name, headsign, productcategory, s0_id, s1_id,
+        b += sprintf (b, "%s %5d %3d %5d %5d %s %+3.1f %s %+3.1f ;%s;%s;%s;%s;%s;%s;%s\n",
+            leg_mode, leg->route, leg->trip, leg->s0, leg->s1, ct0, delay_0, ct1, delay_1, agency_name, short_name, headsign, productcategory, s0_id, s1_id,
             (alert_msg ? alert_msg : ""));
 
         /* EXAMPLE

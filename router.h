@@ -28,6 +28,8 @@ struct router_state {
     /* Second phase footpath/transfer results */
     uint32_t walk_from;  // The stop from which this stop was reached by walking (2nd phase)
     rtime_t  walk_time;  // The time when this stop was reached by walking (2nd phase)
+    uint16_t back_route_stop;
+    uint16_t route_stop;
 };
 
 
@@ -125,9 +127,10 @@ struct leg {
     uint32_t s1;    // to stop index
     rtime_t  t0;    // start time
     rtime_t  t1;    // end time
+    int16_t  d0;    // start delay
+    int16_t  d1;    // end delay
     uint32_t route;
     uint32_t trip;
-//    int32_t  delay; // signed realtime delay, in seconds
 };
 
 /* An itinerary is a chain of legs leading from one place to another. */
