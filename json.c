@@ -193,6 +193,7 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
     char servicedate[9] = "\0";
     int64_t departuredelay = 0;
     int64_t arrivaldelay = 0;
+    uint32_t trip_index;
 
     if (leg->route == WALK) mode = "WALK"; else {
         headsign = tdata_headsign_for_route(tdata, leg->route);
@@ -203,8 +204,9 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         agency_name = tdata_agency_name_for_route(tdata, leg->route);
         agency_url = tdata_agency_url_for_route(tdata, leg->route);
         trip_id = tdata_trip_id_for_route_trip_index(tdata, leg->route, leg->trip);
-        trip_t *trip = &tdata->trips[leg->trip];
-        rtime_t begin_time = tdata->trips[tdata->routes[leg->route].trip_ids_offset + leg->trip].begin_time;
+        trip_index = tdata->routes[leg->route].trip_ids_offset + leg->trip;
+        trip_t *trip = &tdata->trips[trip_index];
+        rtime_t begin_time = trip->begin_time;
 
         struct tm ltm;
         time_t servicedate_time = date + RTIME_TO_SEC(begin_time);
@@ -233,19 +235,15 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         json_kl("endTime",   endtime);
 
         #ifdef RRRR_REALTIME_EXPANDED
-        if (leg->d0 == 0) {
-            json_kv("departureDelay", NULL);
-        } else {
+        if (leg->route != WALK && tdata->trip_stoptimes[trip_index]) {
             json_kl("departureDelay", leg->d0);
-        }
-        if (leg->d1 == 0) {
-            json_kv("arrivalDelay", NULL);
-        } else {
             json_kl("arrivalDelay", leg->d1);
-        }
+        } else
         #else
-        json_kv("departureDelay", NULL);
-        json_kv("arrivalDelay", NULL);
+        {
+            json_kv("departureDelay", NULL);
+            json_kv("arrivalDelay", NULL);
+        }
         #endif
 
         json_kv("routeShortName", route_shortname);
