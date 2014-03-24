@@ -205,21 +205,6 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         trip_id = tdata_trip_id_for_route_trip_index(tdata, leg->route, leg->trip);
         trip_t *trip = &tdata->trips[leg->trip];
         rtime_t begin_time = tdata->trips[tdata->routes[leg->route].trip_ids_offset + leg->trip].begin_time;
-        #ifdef RRRR_REALTIME_EXPANDED
-        route_t *route = &tdata->routes[leg->route];
-        if (tdata->trip_stoptimes[route->trip_ids_offset + leg->trip]) {
-            uint32_t *route_stops = &tdata->route_stops[route->route_stops_offset];
-            for (uint32_t rs = 0; rs < route->n_stops; ++rs) {
-                if (route_stops[rs] == leg->s0) {
-                    rtime_t orig = begin_time + tdata->stop_times[trip->stop_times_offset + rs].departure;
-                    departuredelay = (RTIME_TO_SEC_SIGNED(tdata->trip_stoptimes[route->trip_ids_offset + leg->trip][rs].departure) - RTIME_TO_SEC_SIGNED(orig)) * 1000LL;
-                } else if (route_stops[rs] == leg->s1) {
-                    rtime_t orig = begin_time + tdata->stop_times[trip->stop_times_offset + rs].arrival;
-                    arrivaldelay = (RTIME_TO_SEC_SIGNED(tdata->trip_stoptimes[route->trip_ids_offset + leg->trip][rs].arrival) - RTIME_TO_SEC_SIGNED(orig)) * 1000LL;
-                }
-            }
-        }
-        #endif
 
         struct tm ltm;
         time_t servicedate_time = date + RTIME_TO_SEC(begin_time);
@@ -246,8 +231,23 @@ static void json_leg (struct leg *leg, tdata_t *tdata, router_request_t *req, ti
         json_kv("mode", mode);
         json_kl("startTime", starttime);
         json_kl("endTime",   endtime);
-        json_kl("departureDelay", departuredelay);
-        json_kl("arrivalDelay", arrivaldelay);
+
+        #ifdef RRRR_REALTIME_EXPANDED
+        if (leg->d0 == 0) {
+            json_kv("departureDelay", NULL);
+        } else {
+            json_kl("departureDelay", leg->d0);
+        }
+        if (leg->d1 == 0) {
+            json_kv("arrivalDelay", NULL);
+        } else {
+            json_kl("arrivalDelay", leg->d1);
+        }
+        #else
+        json_kv("departureDelay", NULL);
+        json_kv("arrivalDelay", NULL);
+        #endif
+
         json_kv("routeShortName", route_shortname);
         json_kv("route", route_shortname);
         json_kv("headsign", headsign);
