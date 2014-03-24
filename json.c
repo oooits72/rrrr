@@ -166,15 +166,15 @@ static void json_place (char *key, rtime_t arrival, rtime_t departure, uint32_t 
         json_kf("lon", coords.lon);
         json_kv("wheelchairBoarding", (*stop_attr & sa_wheelchair_boarding) ? "true" : NULL);
         json_kv("visualAccessible", (*stop_attr & sa_visual_accessible) ? "true" : NULL);
-	if (arrival == UNREACHED)
-        	json_kv("arrival", NULL);
-	else
-        	json_kl("arrival", rtime_to_msec(arrival, date));
+    if (arrival == UNREACHED)
+        json_kv("arrival", NULL);
+    else
+        json_kl("arrival", rtime_to_msec(arrival, date));
 
-	if (departure == UNREACHED)
-		json_kv("departure", NULL);
-	else
-		json_kl("departure", rtime_to_msec(departure, date));
+    if (departure == UNREACHED)
+        json_kv("departure", NULL);
+    else
+        json_kl("departure", rtime_to_msec(departure, date));
     json_end_obj();
 }
 
