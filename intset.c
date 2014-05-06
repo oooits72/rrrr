@@ -37,9 +37,9 @@ void IntSet_clear (IntSet *is) {
 }
 
 IntSet *IntSet_new (int n) {
-    IntSet *is = malloc (sizeof (IntSet));
+    IntSet *is = (IntSet *) malloc (sizeof (IntSet));
     is->size = n;
-    is->elements = malloc (sizeof (struct element) * n);
+    is->elements = (struct element *) malloc (sizeof (struct element) * n);
     IntSet_clear (is);
     return is;
 }
@@ -83,7 +83,7 @@ void IntSet_add (IntSet *is, uint32_t value) {
             if (e->next == NULL) break;
             e = e->next;
         }
-        e->next = malloc (sizeof (struct element));
+        e->next = (struct element *) malloc (sizeof (struct element));
         e = e->next;
     }
     e->key = value;

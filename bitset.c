@@ -12,7 +12,7 @@
 static void bitset_init(BitSet *self, uint32_t capacity) {
     self->capacity = capacity;
     self->nchunks = (capacity + 63) / 64;   // Round upwards
-    self->chunks = calloc(self->nchunks, sizeof(uint64_t));
+    self->chunks = (uint64_t *) calloc(self->nchunks, sizeof(uint64_t));
     if (self->chunks == NULL) {
         printf("bitset chunk allocation failure.");
         exit(1);
@@ -21,7 +21,7 @@ static void bitset_init(BitSet *self, uint32_t capacity) {
 
 /* Allocate a new bitset of the specified capacity, and return a pointer to the BitSet struct. */
 BitSet *bitset_new(uint32_t capacity) {
-    BitSet *bs = malloc(sizeof(BitSet));
+    BitSet *bs = (BitSet *) malloc(sizeof(BitSet));
     if (bs == NULL) {
         printf("bitset allocation failure.");
         exit(1);

@@ -229,7 +229,7 @@ void compute_route_stats () {
     {
         int n_stops_all_routes = 0; // Sum(route.n_stops) over all routes. Each stop may appear in more than one route.
         for (uint32_t r = 0; r < tdata.n_routes; ++r) n_stops_all_routes += tdata.routes[r].n_stops;
-        route_stats = malloc (n_stops_all_routes * sizeof(struct stats));
+        route_stats = (struct stats *) malloc (n_stops_all_routes * sizeof(struct stats));
     }
 
     printf ("computing route/stop travel time stats...\n");
@@ -273,7 +273,7 @@ static void profile_transfer (uint32_t route0, uint32_t stop0, uint32_t route1, 
 }
 
 void compute_transfer_stats () {
-    transfer_stats = malloc (tdata.n_stops * sizeof(struct stats));
+    transfer_stats = (struct stats *) malloc (tdata.n_stops * sizeof(struct stats));
 }
 
 int main () {

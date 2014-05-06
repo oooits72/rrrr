@@ -628,7 +628,7 @@ void tdata_rt_stop_routes_append (tdata_t *tdata, uint32_t stop_index, uint32_t 
             if (((uint32_t *) tdata->rt_stop_routes[stop_index]->list)[i] == route_index) return;
         }
     } else {
-        tdata->rt_stop_routes[stop_index] = calloc(1, sizeof(list_t));
+        tdata->rt_stop_routes[stop_index] = (list_t *) calloc(1, sizeof(list_t));
     }
 
     if (tdata->rt_stop_routes[stop_index]->len == tdata->rt_stop_routes[stop_index]->size) {

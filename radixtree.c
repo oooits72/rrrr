@@ -24,7 +24,7 @@ static void die (const char *msg) {
 }
 
 static struct edge *edge_new () {
-    struct edge *e = malloc(sizeof(struct edge));
+    struct edge *e = (struct edge *) malloc(sizeof(struct edge));
     e->next = NULL;
     e->child = NULL;
     e->value = RADIX_TREE_NONE;

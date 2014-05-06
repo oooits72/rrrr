@@ -22,8 +22,8 @@ static int   capacity;
 void binheap_new (int cap) {
     if (cap == 0) cap = BINHEAP_DEFAULT_CAPACITY;
     capacity = cap < BINHEAP_MIN_CAPACITY ? BINHEAP_MIN_CAPACITY : cap;
-    elem = malloc (sizeof(void*) * (capacity + 1)); // 1-based indexing
-    prio = malloc (sizeof(float) * (capacity + 1)); // 1-based indexing
+    elem = (void **) malloc (sizeof(void*) * (capacity + 1)); // 1-based indexing
+    prio = (float *) malloc (sizeof(float) * (capacity + 1)); // 1-based indexing
     if (prio == NULL || elem == NULL) {
         die ("Failed to allocate memory for binheap initialization.");
     }

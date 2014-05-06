@@ -35,11 +35,11 @@ struct slab {
 
 /* Allocate a new slab, adding it to the end of the chain and updating current and end position pointers accordingly. */
 struct slab *slab_new () {
-    struct slab *slab = malloc (sizeof(struct slab));
+    struct slab *slab = (struct slab *) malloc (sizeof(struct slab));
     if (slab == NULL) die ("cannot allocate slab.");
     if (last != NULL) last->next = slab;
     last = slab;
-    last->begin = malloc (slab_size);
+    last->begin = (void *) malloc (slab_size);
     if (last->begin == NULL) die ("cannot allocate slab.");
     last->next = NULL;
     cur = last->begin;
@@ -129,7 +129,7 @@ int test_slab (int argc, char **argv) {
     gettimeofday (&t0, NULL);
     for (int p = 0; p < PASSES; ++p) {
         for (int i = 0; i < ALLOCS; ++i) {
-            test_s *ts = malloc (sizeof(test_s));
+            test_s *ts = (test_s *) malloc (sizeof(test_s));
             ts->a = i;
             ts->b = i;
             ts->c = (i % 2 == 0);

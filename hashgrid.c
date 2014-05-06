@@ -138,9 +138,9 @@ void HashGrid_init (HashGrid *hg, uint32_t grid_dim, double bin_size_meters, coo
     hg->bin_size_meters = bin_size_meters;
     coord_from_meters (&(hg->bin_size), bin_size_meters, bin_size_meters);
     hg->n_items = n_items;
-    hg->counts = malloc(sizeof(uint32_t)  * grid_dim * grid_dim);
-    hg->bins   = malloc(sizeof(uint32_t *) * grid_dim * grid_dim);
-    hg->items  = malloc(sizeof(uint32_t) * n_items);
+    hg->counts = (uint32_t (*)[]) malloc(sizeof(uint32_t)  * grid_dim * grid_dim);
+    hg->bins   = (uint32_t *(*)[]) malloc(sizeof(uint32_t *) * grid_dim * grid_dim);
+    hg->items  = (uint32_t *) malloc(sizeof(uint32_t) * n_items);
     // Initalize all dynamically allocated arrays.
     uint32_t (*counts)[grid_dim] = hg->counts;
     uint32_t  *(*bins)[grid_dim] = hg->bins;
