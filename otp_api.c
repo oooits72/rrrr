@@ -34,9 +34,9 @@
 #define CRLF          "\r\n"
 #define HEADERS       CRLF
 #define END_HEADERS   CRLF CRLF
-#define TEXT_PLAIN    "Content-Type:text/plain"
-#define APPLICATION_JSON    "Content-Type:application/json"
-#define ALLOW_ORIGIN    "Access-Control-Allow-Origin:*"
+#define TEXT_PLAIN       "Content-Type:text/plain"
+#define APPLICATION_JSON "Content-Type:application/json"
+#define ALLOW_ORIGIN     "Access-Control-Allow-Origin:*"
 #define ALLOW_HEADERS    "Access-Control-Allow-Headers:Requested-With,Content-Type"
 #define OK_TEXT_PLAIN "HTTP/1.0 200 OK" HEADERS APPLICATION_JSON CRLF ALLOW_ORIGIN CRLF ALLOW_HEADERS CRLF
 #define ERROR_404     "HTTP/1.0 404 Not Found" HEADERS "Content-Length: 16" CRLF "Connection: close" CRLF TEXT_PLAIN END_HEADERS "FOUR ZERO FOUR" CRLF
@@ -54,7 +54,7 @@ struct buffer {
 //    time_t time; // Time at which last activity occurred, for timeouts
 };
 
-/* Poll items, including zmq broker, http listening, and http client communication sockets */
+/* Poll items, including nanomsg broker, http listening, and http client communication sockets. */
 fd_set pollset;
 int nn_poll_items[2 + MAX_CONN];
 
@@ -241,7 +241,8 @@ static bool remove_conn (uint32_t nc) {
     return true;
 }
 
-// Removing a connection from pollitems and closing its SD are separate, because we have no connection number in the ZMQ response. Connection numbers are always changing.
+// Removing a connection from pollitems and closing its SD are separate, because we have no 
+// connection number in the nanomsg response. Connection numbers are always changing.
 
 /* Remove all connections that have been enqueued for removal in a single operation. */
 static void remove_conn_enqueued () {
@@ -273,7 +274,7 @@ int main (void) {
     }
     HashGrid_init (&hash_grid, 100, 500.0, coords, tdata.n_stops);
     
-    /* Set up TCP/IP stream socket to listed for incoming HTTP requests. */
+    /* Set up TCP/IP stream socket to listen for incoming HTTP requests. */
     struct sockaddr_in server_in_addr = {
         .sin_family = AF_INET,
         .sin_port = htons(PORT),
