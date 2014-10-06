@@ -276,6 +276,8 @@ void tdata_check_coherent (tdata_t *tdata) {
     printf ("checked %d transfers for symmetry.\n", n_transfers_checked);
 }
 
+STRUCT_INITILIZER(tdata)
+
 /* Map an input file into memory and reconstruct pointers to its contents. */
 void tdata_load(char *filename, tdata_t *td) {
 

@@ -54,7 +54,7 @@ struct router {
     // We should move more routing state in here, like round and sub-scratch pointers.
 };
 
-CONVENIENT_STRUCT_INITILIZER(router)
+STRUCT_INITILIZER_DEFINITION(router)
 
 typedef enum trip_attributes {
     ta_none = 0,
@@ -117,7 +117,7 @@ struct router_request {
     bool intermediatestops; // Show intermetiastops in the output
 };
 
-CONVENIENT_STRUCT_INITILIZER(router_request)
+STRUCT_INITILIZER_DEFINITION(router_request)
 
 /* ROUTING RESULT STRUCTURES */ // TODO add summary data like duration, begin/end times?
 
@@ -140,12 +140,14 @@ struct itinerary {
 };
 
 /* A plan is several pareto-optimal itineraries connecting the same two stops. */
+typedef plan plan_t;
 struct plan {
     router_request_t req;
     uint32_t n_itineraries;
     struct itinerary itineraries[RRRR_MAX_ROUNDS];
 };
 
+STRUCT_INITILIZER_DEFINITION(plan)
 
 /* FUNCTION PROTOTYPES */
 

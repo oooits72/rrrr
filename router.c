@@ -19,6 +19,10 @@
 #define RRRR_RESULT_BUFLEN 16000
 static char result_buf[RRRR_RESULT_BUFLEN];
 
+STRUCT_INITILIZER(router)
+
+STRUCT_INITILIZER(plan)
+
 void router_setup(router_t *router, tdata_t *tdata) {
     srand(time(NULL));
     router->tdata = tdata;
@@ -1003,6 +1007,8 @@ uint32_t rrrrandom_stop_by_agency(tdata_t *tdata, uint16_t agency_index) {
 
 	return NONE;
 }
+
+STRUCT_INITILIZER(router_request)
 
 void router_request_initialize(router_request_t *req) {
     req->walk_speed = 1.5; // m/sec
