@@ -40,6 +40,8 @@ typedef uint16_t rtime_t;
 
 #define AGENCY_UNFILTERED (UINT16_MAX)
 
+#define CONVENIENT_STRUCT_INITILIZER(name) inline name##_t name##_create() { name##_t struct_obj; return struct_obj; }
+
 void die(const char* message);
 
 char *btimetext(rtime_t t, char *buf); // minimum buffer size is 9 characters

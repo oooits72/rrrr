@@ -54,6 +54,7 @@ struct router {
     // We should move more routing state in here, like round and sub-scratch pointers.
 };
 
+CONVENIENT_STRUCT_INITILIZER(router)
 
 typedef enum trip_attributes {
     ta_none = 0,
@@ -116,6 +117,7 @@ struct router_request {
     bool intermediatestops; // Show intermetiastops in the output
 };
 
+CONVENIENT_STRUCT_INITILIZER(router_request)
 
 /* ROUTING RESULT STRUCTURES */ // TODO add summary data like duration, begin/end times?
 

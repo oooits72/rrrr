@@ -115,6 +115,8 @@ struct tdata {
     TransitRealtime__FeedMessage *alerts;
 };
 
+CONVENIENT_STRUCT_INITILIZER(tdata)
+
 void tdata_load(char* filename, tdata_t*);
 
 void tdata_close(tdata_t*);
