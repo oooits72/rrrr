@@ -140,7 +140,7 @@ struct itinerary {
 };
 
 /* A plan is several pareto-optimal itineraries connecting the same two stops. */
-typedef plan plan_t;
+typedef struct plan plan_t;
 struct plan {
     router_request_t req;
     uint32_t n_itineraries;
