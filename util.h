@@ -43,6 +43,9 @@ typedef uint16_t rtime_t;
 #define STRUCT_INITILIZER_DEFINITION(name) name##_t name##_create();
 #define STRUCT_INITILIZER(name) name##_t name##_create() { name##_t struct_obj; return struct_obj; }
 
+#define STRUCT_ARRAY_GETTER_DEFINITION(struct_name, field_type) struct field_type struct_name##_get_##field_type(struct struct_name val, uint32_t at_index);
+#define STRUCT_ARRAY_GETTER(struct_name, field_name, field_type) struct field_type struct_name##_get_##field_type(struct struct_name val, uint32_t at_index) { return val. field_name [at_index]; }
+
 void die(const char* message);
 
 char *btimetext(rtime_t t, char *buf); // minimum buffer size is 9 characters

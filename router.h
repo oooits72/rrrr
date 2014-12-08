@@ -139,6 +139,8 @@ struct itinerary {
     struct leg legs[RRRR_MAX_ROUNDS * 2 + 1];
 };
 
+STRUCT_ARRAY_GETTER_DEFINITION(itinerary, leg)
+
 /* A plan is several pareto-optimal itineraries connecting the same two stops. */
 typedef struct plan plan_t;
 struct plan {
@@ -148,6 +150,8 @@ struct plan {
 };
 
 STRUCT_INITILIZER_DEFINITION(plan)
+
+STRUCT_ARRAY_GETTER_DEFINITION(plan, itinerary)
 
 /* FUNCTION PROTOTYPES */
 
