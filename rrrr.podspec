@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "rrrr"
-  s.version      = "0.0.3"
+  s.version      = "0.0.4"
   s.summary      = "RRRR rapid real-time routing"
 
   s.description  = <<-DESC
@@ -34,10 +34,6 @@ DESC
                     "router.{h,c}",
                     "tdata.{h,c}",
                     "util.{h,c}"
-
-  s.public_header_files = "router.h",
-                          "tdata.h",
-                          "util.h"
 
   s.requires_arc = false
 
