@@ -25,6 +25,7 @@ STRUCT_INITILIZER(plan)
 
 STRUCT_ARRAY_GETTER(plan, itineraries, itinerary)
 STRUCT_ARRAY_GETTER(itinerary, legs, leg)
+STRUCT_ARRAY_SETTER(itinerary, legs, leg)
 
 void router_setup(router_t *router, tdata_t *tdata) {
     srand(time(NULL));

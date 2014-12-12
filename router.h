@@ -140,6 +140,7 @@ struct itinerary {
 };
 
 STRUCT_ARRAY_GETTER_DEFINITION(itinerary, leg)
+STRUCT_ARRAY_SETTER_DEFINITION(itinerary, leg)
 
 /* A plan is several pareto-optimal itineraries connecting the same two stops. */
 typedef struct plan plan_t;
