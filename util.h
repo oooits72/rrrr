@@ -46,8 +46,8 @@ typedef uint16_t rtime_t;
 #define STRUCT_ARRAY_GETTER_DEFINITION(struct_name, field_type) struct field_type struct_name##_get_##field_type(struct struct_name val, uint32_t at_index);
 #define STRUCT_ARRAY_GETTER(struct_name, field_name, field_type) struct field_type struct_name##_get_##field_type(struct struct_name val, uint32_t at_index) { return val. field_name [at_index]; }
 
-#define STRUCT_ARRAY_SETTER_DEFINITION(struct_name, field_type) void struct_name##_set_##field_type(struct struct_name val, struct field_type data, uint32_t at_index);
-#define STRUCT_ARRAY_SETTER(struct_name, field_name, field_type) void struct_name##_set_##field_type(struct struct_name val, struct field_type data, uint32_t at_index) { val. field_name [at_index] = data; }
+#define STRUCT_ARRAY_SETTER_DEFINITION(struct_name, field_type) void struct_name##_set_##field_type(struct struct_name* const val, struct field_type data, uint32_t at_index);
+#define STRUCT_ARRAY_SETTER(struct_name, field_name, field_type) void struct_name##_set_##field_type(struct struct_name* const val, struct field_type data, uint32_t at_index) { val-> field_name [at_index] = data; }
 
 void die(const char* message);
 
