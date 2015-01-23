@@ -34,6 +34,7 @@ DESC
                     "radixtree.{c,h}",
                     "geometry.{c,h}",
                     "hashgrid.{c,h}",
+                    "router_dump.{c,h}",
                     "rrrr_types.h",
                     "config.h"
 
