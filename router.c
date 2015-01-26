@@ -43,6 +43,12 @@ static bool router_setup_hashgrid(router_t *router) {
 }
 #endif
 
+STRUCT_INITILIZER(plan)
+
+STRUCT_ARRAY_GETTER(plan, itineraries, itinerary)
+STRUCT_ARRAY_GETTER(itinerary, legs, leg)
+
+
 bool router_setup(router_t *router, tdata_t *tdata) {
     uint64_t n_states = tdata->n_stops * RRRR_DEFAULT_MAX_ROUNDS;
     router->tdata = tdata;

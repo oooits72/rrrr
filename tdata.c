@@ -369,4 +369,8 @@ void tdata_dump(tdata_t *td) {
         tdata_dump_journey_pattern(td, i, NONE);
     }
 }
+
+STRUCT_INITILIZER(tdata)
+
+
 #endif

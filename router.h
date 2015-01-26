@@ -94,6 +94,13 @@ struct router {
 
 /* FUNCTION PROTOTYPES */
 
+STRUCT_ARRAY_GETTER_DEFINITION(itinerary, leg)
+
+STRUCT_INITILIZER_DEFINITION(plan)
+
+STRUCT_ARRAY_GETTER_DEFINITION(plan, itinerary)
+
+
 bool router_setup(router_t*, tdata_t*);
 
 void router_reset(router_t *router);

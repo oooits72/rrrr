@@ -267,4 +267,7 @@ rtime_t transfer_duration (tdata_t *tdata, router_request_t *req, spidx_t stop_i
 
 const char *tdata_stop_name_for_index(tdata_t *td, spidx_t stop_index);
 
+STRUCT_INITILIZER_DEFINITION(tdata)
+
+
 #endif /* _TDATA_H */
