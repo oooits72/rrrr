@@ -187,9 +187,6 @@ struct tdata {
     #endif
 };
 
-STRUCT_INITILIZER_DEFINITION(tdata)
-
-
 bool tdata_load(tdata_t *td, char *filename);
 
 void tdata_close(tdata_t *td);

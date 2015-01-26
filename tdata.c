@@ -187,8 +187,6 @@ const char *tdata_agency_url_for_journey_pattern(tdata_t *td, uint32_t jp_index)
     return td->agency_urls + (td->agency_urls_width * (td->journey_patterns)[jp_index].agency_index);
 }
 
-STRUCT_INITILIZER(tdata)
-
 bool tdata_load(tdata_t *td, char *filename) {
     if ( !tdata_io_v3_load (td, filename)) return false;
 

@@ -102,9 +102,6 @@ void router_teardown(router_t*);
 
 bool router_route(router_t*, router_request_t*);
 
-STRUCT_INITILIZER_DEFINITION(router)
-STRUCT_ARRAY_GETTER_DEFINITION(itinerary, leg)
-STRUCT_ARRAY_SETTER_DEFINITION(itinerary, leg)
 
 #endif /* _ROUTER_H */
 

@@ -1435,14 +1435,6 @@ static bool initialize_target (router_t *router, router_request_t *req) {
     }
 }
 
-
-STRUCT_INITILIZER(router)
-STRUCT_ARRAY_GETTER(plan, itineraries, itinerary)
-STRUCT_ARRAY_GETTER(itinerary, legs, leg)
-STRUCT_ARRAY_SETTER(itinerary, legs, leg)
-
-
-
 bool router_route(router_t *router, router_request_t *req) {
     uint8_t i_round, n_rounds;
 
