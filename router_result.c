@@ -389,3 +389,10 @@ uint32_t router_result_dump(router_t *router, router_request_t *req, char *buf, 
     return plan_render (&plan, router->tdata, req, buf, buflen);
 }
 
+STRUCT_INITILIZER(plan)
+STRUCT_INITILIZER(itinerary)
+STRUCT_INITILIZER(leg)
+STRUCT_ARRAY_GETTER(itinerary, legs, leg)
+STRUCT_ARRAY_SETTER(itinerary, legs, leg)
+STRUCT_ARRAY_GETTER(plan, itineraries, itinerary)
+

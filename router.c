@@ -21,6 +21,8 @@
 #include <stdint.h>
 #include <math.h>
 
+STRUCT_INITILIZER(router)
+
 #ifdef RRRR_FEATURE_LATLON
 static bool router_setup_hashgrid(router_t *router) {
     coord_t *coords;
@@ -42,11 +44,6 @@ static bool router_setup_hashgrid(router_t *router) {
     return true;
 }
 #endif
-
-STRUCT_INITILIZER(plan)
-
-STRUCT_ARRAY_GETTER(plan, itineraries, itinerary)
-STRUCT_ARRAY_GETTER(itinerary, legs, leg)
 
 
 bool router_setup(router_t *router, tdata_t *tdata) {

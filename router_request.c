@@ -7,6 +7,7 @@
 /* router_request_to_epoch returns the time-date
  * used in the request in seconds since epoch.
  */
+STRUCT_INITILIZER(router_request)
 
 time_t router_request_to_epoch (router_request_t *req, tdata_t *tdata, struct tm *tm_out) {
     time_t seconds;

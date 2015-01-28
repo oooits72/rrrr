@@ -187,6 +187,8 @@ struct tdata {
     #endif
 };
 
+STRUCT_INITILIZER_DEFINITION(tdata)
+
 bool tdata_load(tdata_t *td, char *filename);
 
 void tdata_close(tdata_t *td);
@@ -266,8 +268,6 @@ const char *tdata_stop_desc_for_index(tdata_t *td, spidx_t stop_index);
 rtime_t transfer_duration (tdata_t *tdata, router_request_t *req, spidx_t stop_index_from, spidx_t stop_index_to);
 
 const char *tdata_stop_name_for_index(tdata_t *td, spidx_t stop_index);
-
-STRUCT_INITILIZER_DEFINITION(tdata)
 
 
 #endif /* _TDATA_H */
