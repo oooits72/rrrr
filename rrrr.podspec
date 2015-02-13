@@ -19,7 +19,7 @@ DESC
 
   s.platform     = :ios, "2.0"
 
-  s.source       = { :git => "https://github.com/oooits72/rrrr.git", :tag => "0.1.0" }
+  s.source       = { :git => "https://github.com/oooits72/rrrr.git", :tag => "0.2.0" }
 
 
   s.source_files = "router.{c,h}",
