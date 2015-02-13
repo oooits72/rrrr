@@ -43,7 +43,9 @@ DESC
                     "tdata_io_v4.h",
                     "tdata_io_v4_dynamic.c",
                     "tdata_io_v4_mmap.c",
-                    "api.{c,h}"
+                    "api.{c,h}",
+                    "polyline.{c,h}",
+                               "set.{c,h}"
 
   s.requires_arc = false
 
