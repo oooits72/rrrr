@@ -37,13 +37,7 @@
 #define RRRR_TDATA_IO_DYNAMIC 1
 #endif
 
-#ifndef RRRR_TDATA_IO_MMAP
-#define RRRR_FEATURE_REALTIME_EXPANDED 1
-#define RRRR_FEATURE_REALTIME_ALERTS 1
-#define RRRR_FEATURE_REALTIME 1
-
 #define RRRR_DYNAMIC_SLACK 2
-#endif
 
 /* roughly the length of common prefixes in IDs */
 #define RRRR_RADIXTREE_PREFIX_SIZE 4
