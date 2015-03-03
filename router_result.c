@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+
+plan_t plan_create() { plan_t struct_obj; return struct_obj; }
 /* Reverse the times and stops in a leg.
  * Used for creating arrive-by itineraries.
  */

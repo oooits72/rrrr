@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+
+router_request_t router_request_create() { router_request_t struct_obj; return struct_obj; }
+
 /* router_request_to_epoch returns the time-date
  * used in the request in seconds since epoch.
  */

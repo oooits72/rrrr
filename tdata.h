@@ -104,6 +104,8 @@ typedef enum journey_pattern_point_attribute {
     rsa_alighting    =   4
 } journey_pattern_point_attribute_t;
 
+
+
 typedef struct tdata tdata_t;
 struct tdata {
     void *base;
@@ -222,6 +224,8 @@ struct tdata {
     hashgrid_t hg;
     #endif
 };
+
+tdata_t tdata_create();
 
 bool tdata_load(tdata_t *td, char *filename);
 
@@ -350,3 +354,7 @@ void tdata_extends (tdata_t *tdata, latlon_t *ll, latlon_t *ur);
 void tdata_modes (tdata_t *tdata, tmode_t *m);
 
 #endif /* _TDATA_H */
+
+
+
+

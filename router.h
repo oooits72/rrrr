@@ -90,6 +90,8 @@ struct router {
 
 /* FUNCTION PROTOTYPES */
 
+router_t router_create();
+
 bool router_setup(router_t*, tdata_t*);
 
 void router_reset(router_t *router);

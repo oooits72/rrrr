@@ -184,6 +184,8 @@ struct router_request {
 };
 
 
+router_request_t router_request_create();
+
 #ifndef _LP64
     #define ZU "%u"
 #else

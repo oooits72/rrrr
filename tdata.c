@@ -34,6 +34,9 @@
 #include "config.h"
 #include "bitset.h"
 
+
+tdata_t tdata_create() { tdata_t struct_obj; return struct_obj; }
+
 const char *tdata_line_id_for_journey_pattern(tdata_t *td, jpidx_t jp_index) {
     uint16_t route_index;
     if (jp_index == NONE) return "NONE";
@@ -589,3 +592,6 @@ void tdata_modes (tdata_t *tdata, tmode_t *m) {
 
     *m = (tmode_t) attributes;
 }
+
+
+

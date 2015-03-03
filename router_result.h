@@ -60,6 +60,8 @@ struct plan {
     uint8_t n_itineraries;
 };
 
+plan_t plan_create();
+
 /* Structure to temporary store abstracted plans */
 typedef struct result result_t;
 struct result {
