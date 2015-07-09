@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "rrrr"
-  s.version      = "0.2.1"
+  s.version      = "0.2.2"
   s.summary      = "RRRR rapid real-time routing"
 
   s.description  = <<-DESC
@@ -19,7 +19,7 @@ DESC
 
   s.platform     = :ios, "2.0"
 
-  s.source       = { :git => "https://github.com/oooits72/rrrr.git", :tag => "0.2.1" }
+  s.source       = { :git => "https://github.com/oooits72/rrrr.git", :tag => "0.2.2" }
 
 
   s.source_files = "router.{c,h}",

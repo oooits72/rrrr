@@ -24,7 +24,9 @@
 #include <sys/types.h>
 
 
-router_t router_create() { router_t struct_obj; return struct_obj; }
+router_t router_create() { router_t struct_obj;
+   memset(&struct_obj, 0, sizeof(struct_obj));
+    return struct_obj; }
 
 bool router_setup(router_t *router, tdata_t *tdata) {
     uint64_t n_states = tdata->n_stop_points * RRRR_DEFAULT_MAX_ROUNDS;

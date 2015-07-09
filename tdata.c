@@ -35,7 +35,9 @@
 #include "bitset.h"
 
 
-tdata_t tdata_create() { tdata_t struct_obj; return struct_obj; }
+tdata_t tdata_create() { tdata_t struct_obj;
+     memset(&struct_obj, 0, sizeof(struct_obj));
+ return struct_obj; }
 
 const char *tdata_line_id_for_journey_pattern(tdata_t *td, jpidx_t jp_index) {
     uint16_t route_index;
