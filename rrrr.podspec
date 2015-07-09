@@ -17,7 +17,7 @@ DESC
                            "skywave" => "",
                            "JordenVerwer" => "" }
 
-  s.platform     = :ios, "2.0"
+  s.platform     = :ios, "7.0"
 
   s.source       = { :git => "https://github.com/oooits72/rrrr.git", :tag => "0.2.2" }
 
