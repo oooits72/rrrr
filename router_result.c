@@ -6,7 +6,9 @@
 #include <stdlib.h>
 
 
-plan_t plan_create() { plan_t struct_obj; return struct_obj; }
+plan_t plan_create() { plan_t struct_obj;
+     memset(&struct_obj, 0, sizeof(struct_obj));
+    return struct_obj; }
 /* Reverse the times and stops in a leg.
  * Used for creating arrive-by itineraries.
  */
